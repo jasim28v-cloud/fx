@@ -1,17 +1,24 @@
 import { 
     auth, database, firestore,
-    ref, set, get, push, onValue, update, remove, query, orderByChild, equalTo,
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    doc, setDoc, getDoc, collection, addDoc, fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot,
-    ADMIN_EMAIL, ADMIN_CODE
+    ref, set, get, push, onValue, update, remove,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile,
+    doc, setDoc, getDoc, collection, addDoc, fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot, fsOrderBy,
+    ADMIN_EMAIL, ADMIN_CODE,
+    CLOUDINARY_CONFIG
 } from './firebase-config.js';
 
-// Global variables
+// Global Variables
 let currentUser = null;
 let currentChatUser = null;
 let isAdmin = false;
 let usersCache = new Map();
-let messagesUnsubscribe = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let peerConnection = null;
+let localStream = null;
+let remoteStream = null;
+let currentCall = null;
 
 // DOM Elements
 const authContainer = document.getElementById('authContainer');
@@ -31,479 +38,533 @@ const sendMessageBtn = document.getElementById('sendMessageBtn');
 const closeChat = document.getElementById('closeChat');
 const chatUserName = document.getElementById('chatUserName');
 const typingIndicator = document.getElementById('typingIndicator');
+const imageUploadBtn = document.getElementById('imageUploadBtn');
+const recordAudioBtn = document.getElementById('recordAudioBtn');
+const voiceCallBtn = document.getElementById('voiceCallBtn');
+const callModal = document.getElementById('callModal');
+const callStatus = document.getElementById('callStatus');
+const endCallBtn = document.getElementById('endCallBtn');
+const acceptCallBtn = document.getElementById('acceptCallBtn');
+const callAvatar = document.getElementById('callAvatar');
 
 let isLoginMode = true;
+let typingTimeout = null;
+let currentMessagesUnsubscribe = null;
 
-// Check if user is admin
-function checkAdmin(email) {
-    return email === ADMIN_EMAIL;
-}
+// ============ AUTHENTICATION ============
+function checkAdmin(email) { return email === ADMIN_EMAIL; }
 
-// Initialize auth state
 onAuthStateChanged(auth, async (user) => {
+    console.log("Auth state:", user);
     if (user) {
         currentUser = user;
         isAdmin = checkAdmin(user.email);
-        
-        // Save user to Firestore if new
-        const userRef = doc(firestore, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-            await setDoc(userRef, {
-                uid: user.uid,
-                email: user.email,
-                username: user.displayName || user.email.split('@')[0],
-                createdAt: new Date().toISOString(),
-                isAdmin: isAdmin,
-                isBanned: false
-            });
-        } else {
-            // Update admin status if needed
-            if (isAdmin && !userSnap.data().isAdmin) {
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    uid: user.uid, email: user.email,
+                    username: user.displayName || user.email.split('@')[0],
+                    createdAt: new Date().toISOString(),
+                    isAdmin: isAdmin, isBanned: false
+                });
+            } else if (isAdmin && !userSnap.data().isAdmin) {
                 await updateDoc(userRef, { isAdmin: true });
             }
-        }
-        
-        // Load user data
-        const userData = userSnap.exists() ? userSnap.data() : {
-            uid: user.uid,
-            email: user.email,
-            username: user.email.split('@')[0]
-        };
-        
-        showMainApp();
-        loadUsers();
-        loadChats();
-        loadProfile();
-        
-        // Setup real-time listeners
-        setupRealtimeListeners();
-        
-    } else {
-        showAuthScreen();
-    }
+            showMainApp();
+            loadUsers(); loadChats(); loadProfile();
+            setupCallListeners();
+        } catch (error) { console.error("Error:", error); }
+    } else { showAuthScreen(); }
 });
 
-// Setup real-time listeners for messages
-function setupRealtimeListeners() {
-    if (messagesUnsubscribe) messagesUnsubscribe();
+function showAuthScreen() { if (authContainer) authContainer.style.display = 'flex'; if (appContainer) appContainer.style.display = 'none'; }
+function showMainApp() { if (authContainer) authContainer.style.display = 'none'; if (appContainer) appContainer.style.display = 'block'; }
+
+if (toggleAuth) {
+    toggleAuth.addEventListener('click', () => {
+        isLoginMode = !isLoginMode;
+        submitBtn.textContent = isLoginMode ? 'تسجيل دخول' : 'إنشاء حساب';
+        toggleAuth.textContent = isLoginMode ? 'ليس لديك حساب؟ إنشاء حساب' : 'لديك حساب؟ سجل دخول';
+        if (usernameInput) usernameInput.style.display = isLoginMode ? 'none' : 'block';
+    });
+}
+
+if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const username = usernameInput.value.trim();
+        if (!email || !password) { alert('يرجى إدخال البريد الإلكتروني وكلمة المرور'); return; }
+        try {
+            if (isLoginMode) {
+                await signInWithEmailAndPassword(auth, email, password);
+            } else {
+                if (!username) { alert('يرجى إدخال اسم المستخدم'); return; }
+                if (password.length < 6) { alert('كلمة المرور 6 أحرف على الأقل'); return; }
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(userCredential.user, { displayName: username });
+            }
+        } catch (error) {
+            let msg = { 'auth/email-already-in-use': 'البريد مستخدم', 'auth/invalid-email': 'بريد غير صحيح', 'auth/weak-password': 'كلمة مرور ضعيفة', 'auth/wrong-password': 'كلمة مرور خاطئة', 'auth/user-not-found': 'مستخدم غير موجود' }[error.code] || 'حدث خطأ';
+            alert(msg);
+        }
+    });
+}
+
+// ============ CLOUDINARY UPLOAD ============
+function uploadToCloudinary(file, type) {
+    return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+        
+        fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/${type}/upload`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => resolve({ url: data.secure_url, public_id: data.public_id }))
+        .catch(reject);
+    });
+}
+
+if (imageUploadBtn) {
+    imageUploadBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            imageUploadBtn.disabled = true;
+            imageUploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+                const result = await uploadToCloudinary(file, 'image');
+                await sendMessage('📷 صورة', result.url, 'image');
+            } catch (error) { alert('فشل رفع الصورة'); }
+            finally { imageUploadBtn.disabled = false; imageUploadBtn.innerHTML = '<i class="fas fa-image"></i>'; }
+        };
+        input.click();
+    });
+}
+
+// ============ AUDIO RECORDING ============
+if (recordAudioBtn) {
+    recordAudioBtn.addEventListener('click', async () => {
+        if (isRecording) {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordAudioBtn.classList.remove('recording-btn');
+                recordAudioBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                isRecording = false;
+            }
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const file = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
+                    recordAudioBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const result = await uploadToCloudinary(file, 'video'); // video for audio
+                        await sendMessage('🎤 رسالة صوتية', result.url, 'audio');
+                    } catch (error) { alert('فشل رفع التسجيل'); }
+                    finally { recordAudioBtn.innerHTML = '<i class="fas fa-microphone"></i>'; }
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                recordAudioBtn.classList.add('recording-btn');
+                recordAudioBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                isRecording = true;
+                
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        recordAudioBtn.classList.remove('recording-btn');
+                        recordAudioBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        isRecording = false;
+                    }
+                }, 30000); // max 30 seconds
+            } catch (error) { alert('لا يمكن الوصول إلى الميكروفون'); }
+        }
+    });
+}
+
+// ============ VOICE CALL (WebRTC) ============
+async function setupCallListeners() {
+    const callsRef = ref(database, 'calls');
+    onValue(callsRef, (snapshot) => {
+        const calls = snapshot.val();
+        if (calls && currentUser) {
+            for (const [callId, call] of Object.entries(calls)) {
+                if (call.to === currentUser.uid && call.status === 'calling') {
+                    showIncomingCall(callId, call.from);
+                }
+            }
+        }
+    });
+}
+
+async function startVoiceCall(toUserId) {
+    const callId = `${currentUser.uid}_${toUserId}_${Date.now()}`;
+    const callRef = ref(database, `calls/${callId}`);
+    await set(callRef, {
+        from: currentUser.uid,
+        to: toUserId,
+        status: 'calling',
+        timestamp: new Date().toISOString()
+    });
     
-    const chatsQuery = fsQuery(
-        collection(firestore, 'chats'),
-        where('participants', 'array-contains', currentUser.uid)
-    );
+    showCallModal('جاري الاتصال...', false);
+    currentCall = { callId, toUserId };
     
-    messagesUnsubscribe = onSnapshot(chatsQuery, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === 'modified' || change.type === 'added') {
-                loadChats();
-                if (currentChatUser && change.doc.data().participants.includes(currentChatUser.uid)) {
-                    loadMessages(currentChatUser);
+    // Listen for answer
+    onValue(callRef, async (snapshot) => {
+        const call = snapshot.val();
+        if (call && call.status === 'answered') {
+            await initiateWebRTC(toUserId, callId);
+        } else if (call && call.status === 'rejected') {
+            closeCallModal();
+            alert('المستخدم رفض المكالمة');
+        } else if (call && call.status === 'ended') {
+            closeCallModal();
+            endWebRTC();
+        }
+    });
+}
+
+function showIncomingCall(callId, fromUserId) {
+    getUserById(fromUserId).then(user => {
+        if (!user) return;
+        callModal.classList.add('active');
+        callAvatar.innerHTML = `<i class="fas fa-phone-alt"></i>`;
+        callStatus.textContent = `${user.username} يتصل بك...`;
+        acceptCallBtn.style.display = 'block';
+        currentCall = { callId, fromUserId };
+        
+        acceptCallBtn.onclick = async () => {
+            const callRef = ref(database, `calls/${callId}`);
+            await update(callRef, { status: 'answered' });
+            acceptCallBtn.style.display = 'none';
+            callStatus.textContent = 'جاري الاتصال...';
+            await initiateWebRTC(fromUserId, callId);
+        };
+        
+        endCallBtn.onclick = async () => {
+            const callRef = ref(database, `calls/${callId}`);
+            await update(callRef, { status: 'rejected' });
+            closeCallModal();
+        };
+    });
+}
+
+async function initiateWebRTC(remoteUserId, callId) {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        peerConnection = new RTCPeerConnection(configuration);
+        
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        
+        peerConnection.ontrack = (event) => {
+            remoteStream = event.streams[0];
+            // Play remote audio
+            const audio = new Audio();
+            audio.srcObject = remoteStream;
+            audio.play();
+        };
+        
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                const candidateRef = ref(database, `calls/${callId}/candidates/${Date.now()}`);
+                set(candidateRef, event.candidate);
+            }
+        };
+        
+        // Create or answer offer
+        const callRef = ref(database, `calls/${callId}`);
+        const callSnap = await get(callRef);
+        const call = callSnap.val();
+        
+        if (call && call.status === 'calling' && call.from === currentUser.uid) {
+            // Caller creates offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            await update(callRef, { offer: offer });
+        } else {
+            // Callee answers
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            await update(callRef, { answer: answer });
+        }
+        
+        // Listen for remote description
+        onValue(callRef, async (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.offer && !peerConnection.currentRemoteDescription && peerConnection.signalingState === 'stable') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                if (data.from === remoteUserId) {
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    await update(callRef, { answer: answer });
+                }
+            }
+            if (data && data.answer && !peerConnection.currentRemoteDescription) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+            // Handle candidates
+            if (data && data.candidates) {
+                for (const key in data.candidates) {
+                    const candidate = data.candidates[key];
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                 }
             }
         });
-    });
-}
-
-// Show auth screen
-function showAuthScreen() {
-    authContainer.style.display = 'flex';
-    appContainer.style.display = 'none';
-    currentUser = null;
-    isAdmin = false;
-}
-
-// Show main app
-function showMainApp() {
-    authContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-}
-
-// Toggle between login and signup
-toggleAuth.addEventListener('click', () => {
-    isLoginMode = !isLoginMode;
-    if (isLoginMode) {
-        submitBtn.textContent = 'تسجيل دخول';
-        toggleAuth.textContent = 'ليس لديك حساب؟ إنشاء حساب';
-        usernameInput.style.display = 'none';
-    } else {
-        submitBtn.textContent = 'إنشاء حساب';
-        toggleAuth.textContent = 'لديك حساب؟ سجل دخول';
-        usernameInput.style.display = 'block';
-    }
-});
-
-// Handle auth submit
-submitBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const username = usernameInput.value.trim();
-    
-    if (!email || !password) {
-        alert('يرجى إدخال البريد الإلكتروني وكلمة المرور');
-        return;
-    }
-    
-    try {
-        if (isLoginMode) {
-            // Login
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            console.log('تم تسجيل الدخول:', userCredential.user.email);
-        } else {
-            // Signup
-            if (!username) {
-                alert('يرجى إدخال اسم المستخدم');
-                return;
-            }
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await updateProfile(userCredential.user, { displayName: username });
-            console.log('تم إنشاء الحساب:', userCredential.user.email);
-        }
+        
+        showCallModal('متصل...', true);
+        
     } catch (error) {
-        console.error('Auth error:', error);
-        alert(getErrorMessage(error.code));
+        console.error('WebRTC error:', error);
+        alert('لا يمكن بدء المكالمة');
+        endWebRTC();
     }
+}
+
+function endWebRTC() {
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
+    if (peerConnection) peerConnection.close();
+    if (currentCall) {
+        const callRef = ref(database, `calls/${currentCall.callId}`);
+        update(callRef, { status: 'ended' });
+        setTimeout(() => remove(callRef), 5000);
+    }
+    localStream = null;
+    peerConnection = null;
+    currentCall = null;
+}
+
+function showCallModal(status, showEndOnly = false) {
+    callModal.classList.add('active');
+    callStatus.textContent = status;
+    acceptCallBtn.style.display = 'none';
+    endCallBtn.onclick = () => {
+        endWebRTC();
+        closeCallModal();
+    };
+}
+
+function closeCallModal() {
+    callModal.classList.remove('active');
+    endWebRTC();
+}
+
+if (voiceCallBtn) voiceCallBtn.addEventListener('click', () => {
+    if (currentChatUser) startVoiceCall(currentChatUser.uid);
 });
 
-// Get error message
-function getErrorMessage(code) {
-    const messages = {
-        'auth/email-already-in-use': 'البريد الإلكتروني مستخدم بالفعل',
-        'auth/invalid-email': 'البريد الإلكتروني غير صحيح',
-        'auth/weak-password': 'كلمة المرور ضعيفة (6 أحرف على الأقل)',
-        'auth/wrong-password': 'كلمة المرور غير صحيحة',
-        'auth/user-not-found': 'المستخدم غير موجود'
-    };
-    return messages[code] || 'حدث خطأ، يرجى المحاولة مرة أخرى';
-}
+if (endCallBtn) endCallBtn.onclick = () => { endWebRTC(); closeCallModal(); };
 
-// Load all users
-async function loadUsers() {
-    const usersQuery = fsQuery(
-        collection(firestore, 'users'),
-        where('isBanned', '==', false)
-    );
-    
-    const snapshot = await getDocs(usersQuery);
-    usersCache.clear();
-    
-    let usersHTML = '';
-    snapshot.forEach(doc => {
-        const user = doc.data();
-        if (user.uid !== currentUser.uid) {
-            usersCache.set(user.uid, user);
-            usersHTML += `
-                <div class="chat-item" onclick="window.startChat('${user.uid}', '${user.username}')">
-                    <div class="chat-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${user.username}</div>
-                        <div class="chat-lastmsg">${user.email}</div>
-                    </div>
-                </div>
-            `;
+// ============ CHAT FUNCTIONS ============
+async function sendMessage(text, fileUrl = null, fileType = null) {
+    if (!currentChatUser || (!text && !fileUrl)) return;
+    const chatId = getChatId(currentUser.uid, currentChatUser.uid);
+    try {
+        const chatRef = doc(firestore, 'chats', chatId);
+        const chatSnap = await getDoc(chatRef);
+        if (!chatSnap.exists()) {
+            await setDoc(chatRef, {
+                participants: [currentUser.uid, currentChatUser.uid],
+                createdAt: new Date().toISOString(),
+                lastMessage: text || (fileType === 'image' ? '📷 صورة' : '🎤 رسالة صوتية'),
+                lastMessageTime: new Date().toISOString()
+            });
+        } else {
+            await updateDoc(chatRef, {
+                lastMessage: text || (fileType === 'image' ? '📷 صورة' : '🎤 رسالة صوتية'),
+                lastMessageTime: new Date().toISOString()
+            });
         }
-    });
-    
-    usersList.innerHTML = usersHTML || '<div style="padding: 20px; text-align: center;">لا يوجد مستخدمين</div>';
-}
-
-// Load chats
-async function loadChats() {
-    const chatsQuery = fsQuery(
-        collection(firestore, 'chats'),
-        where('participants', 'array-contains', currentUser.uid)
-    );
-    
-    const snapshot = await getDocs(chatsQuery);
-    let chatsHTML = '';
-    
-    for (const doc of snapshot.docs) {
-        const chat = doc.data();
-        const otherUserId = chat.participants.find(id => id !== currentUser.uid);
-        const otherUser = await getUserById(otherUserId);
-        
-        if (otherUser && !otherUser.isBanned) {
-            const lastMessage = chat.lastMessage || '';
-            const lastMessageTime = chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString() : '';
-            
-            chatsHTML += `
-                <div class="chat-item" onclick="window.startChat('${otherUserId}', '${otherUser.username}')">
-                    <div class="chat-avatar">${otherUser.username.charAt(0).toUpperCase()}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${otherUser.username}</div>
-                        <div class="chat-lastmsg">${lastMessage.substring(0, 30)}</div>
-                    </div>
-                    <div class="chat-time">${lastMessageTime}</div>
-                </div>
-            `;
-        }
-    }
-    
-    chatsList.innerHTML = chatsHTML || '<div style="padding: 20px; text-align: center;">لا يوجد محادثات</div>';
-}
-
-// Get user by ID
-async function getUserById(userId) {
-    if (usersCache.has(userId)) return usersCache.get(userId);
-    
-    const userRef = doc(firestore, 'users', userId);
-    const userSnap = await getDoc(userRef);
-    
-    if (userSnap.exists()) {
-        const user = userSnap.data();
-        usersCache.set(userId, user);
-        return user;
-    }
-    return null;
-}
-
-// Load profile
-async function loadProfile() {
-    const userRef = doc(firestore, 'users', currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.exists() ? userSnap.data() : { username: currentUser.email.split('@')[0] };
-    
-    let profileHTML = `
-        <div class="admin-stat">
-            <i class="fas fa-user-circle" style="font-size: 60px; margin-bottom: 10px;"></i>
-            <h3>${userData.username}</h3>
-            <p>${currentUser.email}</p>
-        </div>
-        <div class="admin-panel" style="margin-top: 20px;">
-            <div style="padding: 20px;">
-                <div style="margin-bottom: 15px;">
-                    <strong>تاريخ الانضمام:</strong> ${new Date(userData.createdAt).toLocaleDateString('ar-EG')}
-                </div>
-                <button class="btn btn-danger" id="logoutBtn" style="margin-top: 20px;">تسجيل الخروج</button>
-            </div>
-        </div>
-    `;
-    
-    // Admin panel
-    if (isAdmin) {
-        const usersQuery = collection(firestore, 'users');
-        const snapshot = await getDocs(usersQuery);
-        
-        let usersAdminHTML = '<div class="admin-panel" style="margin-top: 20px;"><div style="padding: 20px; background: linear-gradient(135deg, #f56565 0%, #ed64a6 100%); color: white;"><h3>لوحة التحكم - مدير النظام</h3></div><div>';
-        
-        snapshot.forEach(doc => {
-            const user = doc.data();
-            if (user.uid !== currentUser.uid) {
-                usersAdminHTML += `
-                    <div class="user-list-item">
-                        <div>
-                            <strong>${user.username}</strong><br>
-                            <small>${user.email}</small>
-                        </div>
-                        <div>
-                            <button class="ban-user-btn" onclick="window.toggleBanUser('${user.uid}', ${!user.isBanned})">
-                                ${user.isBanned ? 'إلغاء الحظر' : 'حظر'}
-                            </button>
-                            <button class="delete-user-btn" onclick="window.deleteUser('${user.uid}')">
-                                حذف
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+        const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+        await addDoc(messagesRef, {
+            senderId: currentUser.uid,
+            text: text || '',
+            fileUrl: fileUrl,
+            fileType: fileType,
+            timestamp: new Date().toISOString(),
+            read: false
         });
-        
-        usersAdminHTML += '</div></div>';
-        profileHTML += usersAdminHTML;
-    }
-    
-    profileContent.innerHTML = profileHTML;
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-        await signOut(auth);
-        showAuthScreen();
-    });
+        if (messageInput) messageInput.value = '';
+    } catch (error) { console.error('Send error:', error); }
 }
 
-// Start chat with user
-window.startChat = async (userId, username) => {
-    currentChatUser = { uid: userId, username };
-    chatUserName.textContent = username;
-    chatArea.style.display = 'block';
-    await loadMessages(currentChatUser);
-};
-
-// Load messages
 async function loadMessages(user) {
+    if (currentMessagesUnsubscribe) currentMessagesUnsubscribe();
     const chatId = getChatId(currentUser.uid, user.uid);
     const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-    const messagesQuery = fsQuery(messagesRef, orderByChild('timestamp'));
-    
-    messagesContainer.innerHTML = '<div style="text-align: center; padding: 20px;">جاري التحميل...</div>';
-    
-    onSnapshot(messagesQuery, (snapshot) => {
-        let messagesHTML = '';
+    const q = fsQuery(messagesRef, fsOrderBy('timestamp', 'asc'));
+    currentMessagesUnsubscribe = onSnapshot(q, (snapshot) => {
+        let html = '';
         snapshot.forEach(doc => {
             const msg = doc.data();
             const isOwn = msg.senderId === currentUser.uid;
-            messagesHTML += `
+            let content = '';
+            if (msg.text) content += `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+            if (msg.fileUrl && msg.fileType === 'image') content += `<img src="${msg.fileUrl}" class="message-image" onclick="window.open('${msg.fileUrl}')" />`;
+            if (msg.fileUrl && msg.fileType === 'audio') content += `<div class="message-audio"><audio controls src="${msg.fileUrl}"></audio></div>`;
+            html += `
                 <div class="message ${isOwn ? 'own' : ''}">
                     <div class="message-bubble">
-                        <div class="message-text">${escapeHtml(msg.text)}</div>
-                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
+                        ${content}
+                        <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('ar-EG')}</div>
                     </div>
                 </div>
             `;
         });
-        
-        messagesContainer.innerHTML = messagesHTML || '<div style="text-align: center; padding: 20px;">لا توجد رسائل</div>';
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (messagesContainer) {
+            messagesContainer.innerHTML = html || '<div style="text-align:center;padding:20px;">لا توجد رسائل</div>';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     });
 }
 
-// Send message
-sendMessageBtn.addEventListener('click', async () => {
-    if (!currentChatUser || !messageInput.value.trim()) return;
-    
-    const text = messageInput.value.trim();
-    const chatId = getChatId(currentUser.uid, currentChatUser.uid);
-    
-    // Create chat document if not exists
-    const chatRef = doc(firestore, 'chats', chatId);
-    const chatSnap = await getDoc(chatRef);
-    
-    if (!chatSnap.exists()) {
-        await setDoc(chatRef, {
-            participants: [currentUser.uid, currentChatUser.uid],
-            createdAt: new Date().toISOString(),
-            lastMessage: text,
-            lastMessageTime: new Date().toISOString()
-        });
-    } else {
-        await updateDoc(chatRef, {
-            lastMessage: text,
-            lastMessageTime: new Date().toISOString()
-        });
-    }
-    
-    // Add message
-    const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-    await addDoc(messagesRef, {
-        senderId: currentUser.uid,
-        text: text,
-        timestamp: new Date().toISOString(),
-        read: false
+async function loadUsers() {
+    const q = fsQuery(collection(firestore, 'users'), where('isBanned', '==', false));
+    const snapshot = await getDocs(q);
+    usersCache.clear();
+    let html = '';
+    snapshot.forEach(doc => {
+        const user = doc.data();
+        if (user.uid !== currentUser?.uid) {
+            usersCache.set(user.uid, user);
+            html += `<div class="chat-item" onclick="window.startChat('${user.uid}', '${escapeHtml(user.username)}')">
+                <div class="chat-avatar">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
+                <div class="chat-info"><div class="chat-name">${escapeHtml(user.username)}</div></div>
+            </div>`;
+        }
     });
-    
-    messageInput.value = '';
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    
-    // Send typing stopped
-    clearTyping();
-});
+    if (usersList) usersList.innerHTML = html || '<div style="padding:20px;text-align:center;">لا يوجد مستخدمين</div>';
+}
 
-// Typing indicator
-let typingTimeout;
-messageInput.addEventListener('input', () => {
-    if (currentChatUser) {
-        sendTypingStatus(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => sendTypingStatus(false), 2000);
-    }
-});
-
-function sendTypingStatus(isTyping) {
-    if (currentChatUser) {
-        const typingRef = ref(database, `typing/${getChatId(currentUser.uid, currentChatUser.uid)}/${currentUser.uid}`);
-        if (isTyping) {
-            set(typingRef, true);
-            setTimeout(() => remove(typingRef), 3000);
-        } else {
-            remove(typingRef);
+async function loadChats() {
+    if (!currentUser) return;
+    const q = fsQuery(collection(firestore, 'chats'), where('participants', 'array-contains', currentUser.uid));
+    const snapshot = await getDocs(q);
+    let html = '';
+    for (const doc of snapshot.docs) {
+        const chat = doc.data();
+        const otherId = chat.participants.find(id => id !== currentUser.uid);
+        const other = await getUserById(otherId);
+        if (other && !other.isBanned) {
+            html += `<div class="chat-item" onclick="window.startChat('${other.uid}', '${escapeHtml(other.username)}')">
+                <div class="chat-avatar">${escapeHtml(other.username.charAt(0).toUpperCase())}</div>
+                <div class="chat-info">
+                    <div class="chat-name">${escapeHtml(other.username)}</div>
+                    <div class="chat-lastmsg">${escapeHtml((chat.lastMessage || '').substring(0, 30))}</div>
+                </div>
+            </div>`;
         }
     }
+    if (chatsList) chatsList.innerHTML = html || '<div style="padding:20px;text-align:center;">لا يوجد محادثات</div>';
 }
 
-// Listen for typing status
-function listenTyping() {
-    if (currentChatUser) {
-        const typingRef = ref(database, `typing/${getChatId(currentUser.uid, currentChatUser.uid)}/${currentChatUser.uid}`);
-        onValue(typingRef, (snapshot) => {
-            if (snapshot.exists()) {
-                typingIndicator.style.display = 'block';
-                typingIndicator.textContent = `${currentChatUser.username} يكتب...`;
-                setTimeout(() => typingIndicator.style.display = 'none', 3000);
-            } else {
-                typingIndicator.style.display = 'none';
+async function getUserById(uid) {
+    if (usersCache.has(uid)) return usersCache.get(uid);
+    try {
+        const snap = await getDoc(doc(firestore, 'users', uid));
+        if (snap.exists()) { usersCache.set(uid, snap.data()); return snap.data(); }
+    } catch(e) {}
+    return null;
+}
+
+async function loadProfile() {
+    if (!currentUser) return;
+    const userSnap = await getDoc(doc(firestore, 'users', currentUser.uid));
+    const userData = userSnap.exists() ? userSnap.data() : { username: currentUser.email.split('@')[0] };
+    let html = `<div class="admin-stat"><i class="fas fa-user-circle" style="font-size:60px;"></i><h3>${escapeHtml(userData.username)}</h3><p>${escapeHtml(currentUser.email)}</p></div>
+        <div class="admin-panel"><div style="padding:20px;"><button class="btn btn-danger" id="logoutBtn" style="width:100%;">تسجيل الخروج</button></div></div>`;
+    if (isAdmin) {
+        const usersSnap = await getDocs(collection(firestore, 'users'));
+        let adminHtml = `<div class="admin-panel"><div style="padding:20px;background:linear-gradient(135deg,#f56565,#ed64a6);color:white;"><h3>👑 لوحة التحكم</h3><p>رمز: ${ADMIN_CODE}</p></div><div>`;
+        usersSnap.forEach(doc => {
+            const u = doc.data();
+            if (u.uid !== currentUser.uid) {
+                adminHtml += `<div class="user-list-item"><div><strong>${escapeHtml(u.username)}</strong><br><small>${escapeHtml(u.email)}</small>${u.isBanned ? ' <span style="color:red;">(محظور)</span>' : ''}</div>
+                    <div><button class="ban-user-btn" onclick="window.toggleBanUser('${u.uid}', ${!u.isBanned})">${u.isBanned ? 'إلغاء الحظر' : 'حظر'}</button>
+                    <button class="delete-user-btn" onclick="window.deleteUser('${u.uid}')">حذف</button></div></div>`;
             }
         });
+        adminHtml += '</div></div>';
+        html += adminHtml;
     }
+    if (profileContent) profileContent.innerHTML = html;
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => { await signOut(auth); showAuthScreen(); });
 }
 
-function clearTyping() {
-    if (currentChatUser) {
+window.startChat = async (uid, username) => {
+    currentChatUser = { uid, username };
+    if (chatUserName) chatUserName.textContent = username;
+    if (chatArea) chatArea.style.display = 'block';
+    await loadMessages(currentChatUser);
+    listenTyping();
+};
+
+function listenTyping() {
+    if (!currentChatUser || !currentUser) return;
+    const typingRef = ref(database, `typing/${getChatId(currentUser.uid, currentChatUser.uid)}/${currentChatUser.uid}`);
+    onValue(typingRef, (snap) => {
+        if (typingIndicator) {
+            if (snap.exists()) { typingIndicator.style.display = 'block'; typingIndicator.textContent = `${currentChatUser.username} يكتب...`; setTimeout(() => { if (typingIndicator) typingIndicator.style.display = 'none'; }, 3000); }
+            else typingIndicator.style.display = 'none';
+        }
+    });
+}
+
+function sendTypingStatus(isTyping) {
+    if (currentChatUser && currentUser) {
         const typingRef = ref(database, `typing/${getChatId(currentUser.uid, currentChatUser.uid)}/${currentUser.uid}`);
-        remove(typingRef);
+        if (isTyping) { set(typingRef, true); setTimeout(() => remove(typingRef), 3000); }
+        else remove(typingRef);
     }
 }
 
-// Close chat
-closeChat.addEventListener('click', () => {
-    chatArea.style.display = 'none';
-    currentChatUser = null;
-    clearTyping();
+if (sendMessageBtn) sendMessageBtn.addEventListener('click', async () => {
+    const text = messageInput?.value.trim();
+    if (text) await sendMessage(text);
+    if (messageInput) messageInput.value = '';
 });
 
-// Navigation
+if (messageInput) {
+    messageInput.addEventListener('input', () => { sendTypingStatus(true); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => sendTypingStatus(false), 2000); });
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessageBtn.click(); });
+}
+
+if (closeChat) closeChat.addEventListener('click', () => { if (chatArea) chatArea.style.display = 'none'; currentChatUser = null; });
+
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-        const page = item.dataset.page;
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         item.classList.add('active');
-        
+        const page = item.dataset.page;
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}Page`).classList.add('active');
-        
         if (page === 'chats') loadChats();
         if (page === 'users') loadUsers();
         if (page === 'profile') loadProfile();
     });
 });
 
-// Admin functions
-window.toggleBanUser = async (userId, isBanned) => {
-    if (!isAdmin) return;
-    const userRef = doc(firestore, 'users', userId);
-    await updateDoc(userRef, { isBanned: !isBanned });
-    alert(isBanned ? 'تم حظر المستخدم' : 'تم إلغاء حظر المستخدم');
-    loadProfile();
-    loadUsers();
-    loadChats();
-};
+window.toggleBanUser = async (uid, banned) => { if (isAdmin) { await updateDoc(doc(firestore, 'users', uid), { isBanned: !banned }); loadProfile(); loadUsers(); loadChats(); } };
+window.deleteUser = async (uid) => { if (isAdmin && confirm('حذف نهائي؟')) { await deleteDoc(doc(firestore, 'users', uid)); loadProfile(); loadUsers(); loadChats(); } };
 
-window.deleteUser = async (userId) => {
-    if (!isAdmin) return;
-    if (confirm('هل أنت متأكد من حذف هذا المستخدم نهائياً؟')) {
-        const userRef = doc(firestore, 'users', userId);
-        await deleteDoc(userRef);
-        alert('تم حذف المستخدم');
-        loadProfile();
-        loadUsers();
-        loadChats();
-    }
-};
+function getChatId(a, b) { return [a, b].sort().join('_'); }
+function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
-// Helper functions
-function getChatId(userId1, userId2) {
-    return [userId1, userId2].sort().join('_');
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Enter key to send
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessageBtn.click();
-});
-
-// Start with login mode
-usernameInput.style.display = 'none';
+if (usernameInput) usernameInput.style.display = 'none';
+console.log("TAGRAME Pro - Ready!");
