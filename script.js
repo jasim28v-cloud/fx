@@ -1,6 +1,7 @@
 // متغيرات عامة
 let currentUser = null;
 let isAdmin = false;
+let currentChatId = 'general';
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,22 +26,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // إنشاء حساب
     document.getElementById('register-button').addEventListener('click', register);
 
-    // تسجيل الخروج
-    document.getElementById('logout-btn').addEventListener('click', logout);
-
-    // إدارة المستخدمين
-    document.getElementById('manage-users-btn').addEventListener('click', function() {
-        loadAdminContent('users');
+    // زر القائمة في النسخة المحمولة
+    document.getElementById('menu-button').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('chat-area').classList.toggle('active');
     });
 
-    // إدارة الدردشات
-    document.getElementById('manage-chats-btn').addEventListener('click', function() {
-        loadAdminContent('chats');
+    // زر لوحة التحكم
+    document.getElementById('admin-button').addEventListener('click', function() {
+        if (isAdmin) {
+            document.getElementById('admin-panel').style.display = 'flex';
+        } else {
+            alert('هذه الميزة للمشرفين فقط');
+        }
     });
 
-    // إدارة الملفات على Cloudinary
-    document.getElementById('cloudinary-btn').addEventListener('click', function() {
-        loadAdminContent('cloudinary');
+    // إغلاق لوحة التحكم
+    document.getElementById('admin-close').addEventListener('click', function() {
+        document.getElementById('admin-panel').style.display = 'none';
+    });
+
+    // زر إنشاء دردشة جديدة
+    document.getElementById('new-chat-btn').addEventListener('click', function() {
+        const chatName = prompt('أدخل اسم الدردشة الجديدة:');
+        if (chatName) {
+            createNewChat(chatName);
+        }
+    });
+
+    // إرسال رسالة
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+    // إرسال الرسالة عند الضغط على Enter
+    document.getElementById('message-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // تعديل ارتفاع حقل الإدخال تلقائيًا
+    const messageInput = document.getElementById('message-input');
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
     });
 
     // التحقق من حالة المصادقة
@@ -49,11 +78,9 @@ document.addEventListener('DOMContentLoaded', function() {
             currentUser = user;
             checkAdminStatus(user.email).then(adminStatus => {
                 isAdmin = adminStatus;
-                if (isAdmin) {
-                    showAdminPanel();
-                } else {
-                    showRegularChat();
-                }
+                showChatInterface();
+                loadChats();
+                loadMessages(currentChatId);
             });
         } else {
             showAuthScreen();
@@ -64,23 +91,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // عرض شاشة المصادقة
 function showAuthScreen() {
     document.getElementById('auth-container').style.display = 'flex';
-    document.getElementById('chat-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'none';
 }
 
-// عرض لوحة تحكم المشرف
-function showAdminPanel() {
+// عرض واجهة الدردشة
+function showChatInterface() {
     document.getElementById('auth-container').style.display = 'none';
-    document.getElementById('chat-container').style.display = 'block';
-    document.getElementById('admin-panel').style.display = 'block';
-    document.getElementById('regular-chat').style.display = 'none';
-}
-
-// عرض واجهة الدردشة العادية
-function showRegularChat() {
-    document.getElementById('auth-container').style.display = 'none';
-    document.getElementById('chat-container').style.display = 'block';
-    document.getElementById('admin-panel').style.display = 'none';
-    document.getElementById('regular-chat').style.display = 'block';
+    document.getElementById('app-container').style.display = 'flex';
 }
 
 // تسجيل الدخول
@@ -101,11 +118,7 @@ function login() {
             // التحقق من إذا كان المستخدم مشرفًا
             checkAdminStatus(email).then(adminStatus => {
                 isAdmin = adminStatus;
-                if (isAdmin) {
-                    showAdminPanel();
-                } else {
-                    showRegularChat();
-                }
+                showChatInterface();
             });
         })
         .catch((error) => {
@@ -160,17 +173,6 @@ function register() {
         });
 }
 
-// تسجيل الخروج
-function logout() {
-    auth.signOut()
-        .then(() => {
-            showAuthScreen();
-        })
-        .catch((error) => {
-            console.error("Error during logout:", error);
-        });
-}
-
 // التحقق من إذا كان المستخدم مشرفًا
 function checkAdminStatus(email) {
     return new Promise((resolve) => {
@@ -203,410 +205,199 @@ function checkAdminStatus(email) {
     });
 }
 
-// تحميل محتوى لوحة التحكم
-function loadAdminContent(type) {
-    const adminContent = document.getElementById('admin-content');
-    adminContent.innerHTML = '<h3>جاري التحميل...</h3>';
-
-    switch(type) {
-        case 'users':
-            loadUsersManagement();
-            break;
-        case 'chats':
-            loadChatsManagement();
-            break;
-        case 'cloudinary':
-            loadCloudinaryManagement();
-            break;
-        default:
-            adminContent.innerHTML = '<h3>اختر قسمًا للإدارة</h3>';
-    }
-}
-
-// إدارة المستخدمين
-function loadUsersManagement() {
-    const adminContent = document.getElementById('admin-content');
-    adminContent.innerHTML = `
-        <h3>إدارة المستخدمين</h3>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="search-users" placeholder="بحث عن مستخدم..." style="padding: 8px; width: 300px; border: 1px solid #ddd; border-radius: 4px;">
-            <button id="add-user-btn" class="form-button" style="display: inline-block; width: auto; margin-left: 10px;">إضافة مستخدم جديد</button>
-        </div>
-        <div id="users-table-container">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background-color: #f8f9fa;">
-                        <th style="padding: 10px; text-align: right;">الاسم</th>
-                        <th style="padding: 10px; text-align: right;">البريد الإلكتروني</th>
-                        <th style="padding: 10px; text-align: right;">تاريخ الإنشاء</th>
-                        <th style="padding: 10px; text-align: right;">مشرف</th>
-                        <th style="padding: 10px; text-align: center;">إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="users-table-body">
-                    <!-- سيتم إضافة المستخدمين هنا -->
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    // تحميل المستخدمين من قاعدة البيانات
-    database.ref('users').once('value')
-        .then(snapshot => {
-            const usersTable = document.getElementById('users-table-body');
-            usersTable.innerHTML = '';
-
-            if (snapshot.exists()) {
-                const users = snapshot.val();
-                for (const userId in users) {
-                    const user = users[userId];
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="padding: 10px; text-align: right;">${user.name || 'غير محدد'}</td>
-                        <td style="padding: 10px; text-align: right;">${user.email}</td>
-                        <td style="padding: 10px; text-align: right;">${new Date(user.createdAt).toLocaleString('ar-EG')}</td>
-                        <td style="padding: 10px; text-align: right;">${user.isAdmin ? 'نعم' : 'لا'}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <button onclick="editUser('${userId}')" style="background: none; border: none; color: var(--primary); cursor: pointer; margin-right: 10px;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="deleteUser('${userId}')" style="background: none; border: none; color: var(--danger); cursor: pointer;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    `;
-                    usersTable.appendChild(row);
-                }
-            } else {
-                usersTable.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">لا يوجد مستخدمين مسجلين</td></tr>';
-            }
-        })
-        .catch(error => {
-            console.error("Error loading users:", error);
-            document.getElementById('users-table-body').innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">حدث خطأ أثناء تحميل المستخدمين</td></tr>';
-        });
-
-    // إضافة حدث للبحث
-    document.getElementById('search-users').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#users-table-body tr');
-
-        rows.forEach(row => {
-            const name = row.cells[0].textContent.toLowerCase();
-            const email = row.cells[1].textContent.toLowerCase();
-            if (name.includes(searchTerm) || email.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-
-    // إضافة حدث لإضافة مستخدم جديد
-    document.getElementById('add-user-btn').addEventListener('click', function() {
-        const name = prompt('أدخل اسم المستخدم الجديد:');
-        const email = prompt('أدخل البريد الإلكتروني للمستخدم الجديد:');
-        const password = prompt('أدخل كلمة المرور للمستخدم الجديد:');
-        const isAdmin = confirm('هل هذا المستخدم مشرف؟');
-
-        if (name && email && password) {
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    const user = userCredential.user;
-                    database.ref('users/' + user.uid).set({
-                        name: name,
-                        email: email,
-                        createdAt: new Date().toISOString(),
-                        isAdmin: isAdmin
-                    }).then(() => {
-                        alert('تم إضافة المستخدم بنجاح!');
-                        loadUsersManagement();
-                    });
-                })
-                .catch(error => {
-                    alert('حدث خطأ أثناء إضافة المستخدم: ' + getAuthErrorMessage(error.code));
-                });
-        }
+// إنشاء دردشة جديدة
+function createNewChat(chatName) {
+    const newChatRef = database.ref('chats').push();
+    newChatRef.set({
+        name: chatName,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser.email
+    }).then(() => {
+        loadChats();
     });
 }
 
-// تعديل مستخدم
-function editUser(userId) {
-    database.ref('users/' + userId).once('value')
-        .then(snapshot => {
-            const user = snapshot.val();
-            const newName = prompt('أدخل الاسم الجديد:', user.name);
-            const newEmail = prompt('أدخل البريد الإلكتروني الجديد:', user.email);
-            const newAdminStatus = confirm(`هل هذا المستخدم مشرف؟ (حاليًا: ${user.isAdmin ? 'نعم' : 'لا'})`);
+// تحميل قائمة المحادثات
+function loadChats() {
+    const chatList = document.getElementById('chat-list');
+    chatList.innerHTML = '';
 
-            if (newName && newEmail) {
-                const updates = {
-                    name: newName,
-                    email: newEmail,
-                    isAdmin: newAdminStatus
-                };
-
-                database.ref('users/' + userId).update(updates)
-                    .then(() => {
-                        alert('تم تحديث المستخدم بنجاح!');
-                        loadUsersManagement();
-                    })
-                    .catch(error => {
-                        alert('حدث خطأ أثناء تحديث المستخدم: ' + error.message);
-                    });
-            }
-        });
-}
-
-// حذف مستخدم
-function deleteUser(userId) {
-    if (confirm('هل أنت متأكد من أنك تريد حذف هذا المستخدم؟')) {
-        database.ref('users/' + userId).remove()
-            .then(() => {
-                alert('تم حذف المستخدم بنجاح!');
-                loadUsersManagement();
-            })
-            .catch(error => {
-                alert('حدث خطأ أثناء حذف المستخدم: ' + error.message);
-            });
-    }
-}
-
-// إدارة الدردشات
-function loadChatsManagement() {
-    const adminContent = document.getElementById('admin-content');
-    adminContent.innerHTML = `
-        <h3>إدارة الدردشات</h3>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="search-chats" placeholder="بحث عن دردشة..." style="padding: 8px; width: 300px; border: 1px solid #ddd; border-radius: 4px;">
-            <button id="add-chat-btn" class="form-button" style="display: inline-block; width: auto; margin-left: 10px;">إنشاء دردشة جديدة</button>
+    // إضافة الدردشة العامة أولًا
+    const generalChat = document.createElement('div');
+    generalChat.className = 'chat-item active';
+    generalChat.innerHTML = `
+        <div class="chat-avatar online">L</div>
+        <div class="chat-info">
+            <div class="chat-name">الدردشة العامة</div>
+            <div class="chat-preview">مرحبًا في دردشة لها تشات!</div>
         </div>
-        <div id="chats-table-container">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background-color: #f8f9fa;">
-                        <th style="padding: 10px; text-align: right;">اسم الدردشة</th>
-                        <th style="padding: 10px; text-align: right;">أنشئت بواسطة</th>
-                        <th style="padding: 10px; text-align: right;">تاريخ الإنشاء</th>
-                        <th style="padding: 10px; text-align: center;">إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="chats-table-body">
-                    <!-- سيتم إضافة الدردشات هنا -->
-                </tbody>
-            </table>
-        </div>
+        <div class="chat-time">الآن</div>
     `;
+    generalChat.addEventListener('click', function() {
+        currentChatId = 'general';
+        document.querySelector('.chat-header-name').textContent = 'الدردشة العامة';
+        document.querySelector('.chat-header-avatar').textContent = 'L';
+        loadMessages(currentChatId);
 
-    // تحميل الدردشات من قاعدة البيانات
-    database.ref('chats').once('value')
+        // إزالة الفئة active من جميع العناصر
+        document.querySelectorAll('.chat-item').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // إضافة الفئة active للعنصر الحالي
+        this.classList.add('active');
+
+        // في النسخة المحمولة، إغلاق القائمة
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('chat-area').classList.add('active');
+    });
+    chatList.appendChild(generalChat);
+
+    // تحميل الدردشات الأخرى من قاعدة البيانات
+    database.ref('chats').orderByChild('createdAt', 'desc').get()
         .then(snapshot => {
-            const chatsTable = document.getElementById('chats-table-body');
-            chatsTable.innerHTML = '';
-
             if (snapshot.exists()) {
                 const chats = snapshot.val();
                 for (const chatId in chats) {
                     const chat = chats[chatId];
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="padding: 10px; text-align: right;">${chat.name}</td>
-                        <td style="padding: 10px; text-align: right;">${chat.createdBy || 'غير محدد'}</td>
-                        <td style="padding: 10px; text-align: right;">${new Date(chat.createdAt).toLocaleString('ar-EG')}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <button onclick="editChat('${chatId}')" style="background: none; border: none; color: var(--primary); cursor: pointer; margin-right: 10px;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="deleteChat('${chatId}')" style="background: none; border: none; color: var(--danger); cursor: pointer;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item';
+                    chatItem.innerHTML = `
+                        <div class="chat-avatar">${chat.name.charAt(0)}</div>
+                        <div class="chat-info">
+                            <div class="chat-name">${chat.name}</div>
+                            <div class="chat-preview">انضم إلى هذه الدردشة</div>
+                        </div>
+                        <div class="chat-time">${new Date(chat.createdAt).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'})}</div>
                     `;
-                    chatsTable.appendChild(row);
+                    chatItem.addEventListener('click', function() {
+                        currentChatId = chatId;
+                        document.querySelector('.chat-header-name').textContent = chat.name;
+                        document.querySelector('.chat-header-avatar').textContent = chat.name.charAt(0);
+                        loadMessages(chatId);
+
+                        // إزالة الفئة active من جميع العناصر
+                        document.querySelectorAll('.chat-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+
+                        // إضافة الفئة active للعنصر الحالي
+                        this.classList.add('active');
+
+                        // في النسخة المحمولة، إغلاق القائمة
+                        document.getElementById('sidebar').classList.remove('open');
+                        document.getElementById('chat-area').classList.add('active');
+                    });
+                    chatList.appendChild(chatItem);
                 }
-            } else {
-                chatsTable.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">لا يوجد دردشات مسجلة</td></tr>';
             }
         })
         .catch(error => {
             console.error("Error loading chats:", error);
-            document.getElementById('chats-table-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">حدث خطأ أثناء تحميل الدردشات</td></tr>';
-        });
-
-    // إضافة حدث للبحث
-    document.getElementById('search-chats').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#chats-table-body tr');
-
-        rows.forEach(row => {
-            const name = row.cells[0].textContent.toLowerCase();
-            if (name.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-
-    // إضافة حدث لإنشاء دردشة جديدة
-    document.getElementById('add-chat-btn').addEventListener('click', function() {
-        const name = prompt('أدخل اسم الدردشة الجديدة:');
-
-        if (name) {
-            const newChatRef = database.ref('chats').push();
-            newChatRef.set({
-                name: name,
-                createdAt: new Date().toISOString(),
-                createdBy: currentUser.email
-            }).then(() => {
-                alert('تم إنشاء الدردشة بنجاح!');
-                loadChatsManagement();
-            });
-        }
-    });
-}
-
-// تعديل دردشة
-function editChat(chatId) {
-    database.ref('chats/' + chatId).once('value')
-        .then(snapshot => {
-            const chat = snapshot.val();
-            const newName = prompt('أدخل الاسم الجديد للدردشة:', chat.name);
-
-            if (newName) {
-                database.ref('chats/' + chatId).update({
-                    name: newName
-                }).then(() => {
-                    alert('تم تحديث الدردشة بنجاح!');
-                    loadChatsManagement();
-                });
-            }
         });
 }
 
-// حذف دردشة
-function deleteChat(chatId) {
-    if (confirm('هل أنت متأكد من أنك تريد حذف هذه الدردشة؟')) {
-        database.ref('chats/' + chatId).remove()
-            .then(() => {
-                alert('تم حذف الدردشة بنجاح!');
-                loadChatsManagement();
+// تحميل الرسائل
+function loadMessages(chatId) {
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.innerHTML = '';
+
+    if (chatId === 'general') {
+        // تحميل رسائل الدردشة العامة
+        database.ref('messages').orderByChild('chatId').equalTo('general').get()
+            .then(snapshot => {
+                if (snapshot.exists()) {
+                    const messages = snapshot.val();
+                    for (const messageId in messages) {
+                        const message = messages[messageId];
+                        addMessageToUI(message);
+                    }
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             })
             .catch(error => {
-                alert('حدث خطأ أثناء حذف الدردشة: ' + error.message);
+                console.error("Error loading messages:", error);
+            });
+    } else {
+        // تحميل رسائل الدردشة المحددة
+        database.ref('messages').orderByChild('chatId').equalTo(chatId).get()
+            .then(snapshot => {
+                if (snapshot.exists()) {
+                    const messages = snapshot.val();
+                    for (const messageId in messages) {
+                        const message = messages[messageId];
+                        addMessageToUI(message);
+                    }
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            })
+            .catch(error => {
+                console.error("Error loading messages:", error);
             });
     }
 }
 
-// إدارة ملفات Cloudinary
-function loadCloudinaryManagement() {
-    const adminContent = document.getElementById('admin-content');
-    adminContent.innerHTML = `
-        <h3>إدارة ملفات Cloudinary</h3>
-        <div style="margin-bottom: 20px;">
-            <p>يمكنك رفع الملفات إلى Cloudinary باستخدام الرابط التالي:</p>
-            <p><a href="https://collection.cloudinary.com/dnillsbmi" target="_blank">https://collection.cloudinary.com/dnillsbmi</a></p>
-            <p>معرف التحميل: ekxzvogb</p>
-        </div>
+// إضافة رسالة إلى الواجهة
+function addMessageToUI(message) {
+    const messagesContainer = document.getElementById('messages-container');
+    const messageElement = document.createElement('div');
 
-        <div style="margin-bottom: 20px;">
-            <h4>رفع ملف جديد</h4>
-            <input type="file" id="file-upload" style="margin-bottom: 10px;">
-            <button id="upload-btn" class="form-button" style="display: inline-block; width: auto;">رفع الملف</button>
-            <div id="upload-status" style="margin-top: 10px;"></div>
-        </div>
+    // تحديد إذا كانت الرسالة مرسلة أو مستلمة
+    const isCurrentUser = message.senderId === currentUser.uid;
+    messageElement.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
 
-        <div>
-            <h4>الملفات الأخيرة</h4>
-            <div id="cloudinary-files" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;"></div>
-        </div>
+    const timeElement = document.createElement('div');
+    timeElement.className = 'message-time';
+    timeElement.textContent = new Date(message.timestamp).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'});
+
+    messageElement.innerHTML = `
+        <div>${message.text}</div>
     `;
-
-    // إضافة حدث لرفع الملفات
-    document.getElementById('upload-btn').addEventListener('click', uploadToCloudinary);
-
-    // عرض بعض الملفات الوهمية (في النسخة الحقيقية، ستقوم بجلب الملفات من Cloudinary)
-    const filesContainer = document.getElementById('cloudinary-files');
-    for (let i = 1; i <= 6; i++) {
-        const fileDiv = document.createElement('div');
-        fileDiv.style.border = '1px solid #ddd';
-        fileDiv.style.padding = '10px';
-        fileDiv.style.borderRadius = '5px';
-        fileDiv.style.textAlign = 'center';
-        fileDiv.innerHTML = `
-            <img src="https://res.cloudinary.com/dnillsbmi/image/upload/v1/sample.jpg" style="width: 100%; height: 120px; object-fit: cover; margin-bottom: 5px;">
-            <p style="font-size: 12px;">file${i}.jpg</p>
-            <button style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px;" onclick="deleteCloudinaryFile('file${i}')">
-                <i class="fas fa-trash"></i> حذف
-            </button>
-        `;
-        filesContainer.appendChild(fileDiv);
-    }
+    messageElement.appendChild(timeElement);
+    messagesContainer.appendChild(messageElement);
 }
 
-// رفع ملف إلى Cloudinary
-function uploadToCloudinary() {
-    const fileInput = document.getElementById('file-upload');
-    const statusElement = document.getElementById('upload-status');
-    const file = fileInput.files[0];
+// إرسال رسالة
+function sendMessage() {
+    const messageInput = document.getElementById('message-input');
+    const messageText = messageInput.value.trim();
 
-    if (!file) {
-        statusElement.textContent = 'يرجى اختيار ملف أولًا';
-        statusElement.style.color = 'var(--danger)';
-        return;
-    }
+    if (messageText && currentUser) {
+        const message = {
+            text: messageText,
+            senderId: currentUser.uid,
+            senderName: currentUser.email.split('@')[0],
+            chatId: currentChatId,
+            timestamp: new Date().toISOString()
+        };
 
-    statusElement.textContent = 'جاري رفع الملف...';
-    statusElement.style.color = 'var(--text-secondary)';
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'ekxzvogb');
-
-    fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        statusElement.textContent = 'تم رفع الملف بنجاح!';
-        statusElement.style.color = 'var(--success)';
-        console.log('File uploaded:', data);
-        // في النسخة الحقيقية، ستقوم بإضافة الملف إلى قائمة الملفات
-    })
-    .catch(error => {
-        statusElement.textContent = 'فشل في رفع الملف: ' + error.message;
-        statusElement.style.color = 'var(--danger)';
-        console.error('Error uploading file:', error);
-    });
-}
-
-// حذف ملف من Cloudinary
-function deleteCloudinaryFile(fileId) {
-    if (confirm('هل أنت متأكد من أنك تريد حذف هذا الملف؟')) {
-        // في النسخة الحقيقية، ستقوم بحذف الملف من Cloudinary
-        alert('تم حذف الملف بنجاح (هذه ميزة وهمية في النسخة التجريبية)');
+        // إضافة الرسالة إلى قاعدة البيانات
+        database.ref('messages').push(message)
+            .then(() => {
+                // إضافة الرسالة إلى الواجهة فورًا
+                addMessageToUI(message);
+                messageInput.value = '';
+                document.getElementById('messages-container').scrollTop =
+                    document.getElementById('messages-container').scrollHeight;
+            })
+            .catch(error => {
+                console.error("Error sending message:", error);
+                alert('فشل في إرسال الرسالة');
+            });
     }
 }
 
 // الحصول على رسالة خطأ مناسبة
 function getAuthErrorMessage(errorCode) {
-    switch(errorCode) {
-        case 'auth/invalid-email':
-            return 'البريد الإلكتروني غير صالح';
-        case 'auth/user-disabled':
-            return 'هذا الحساب معطل';
-        case 'auth/user-not-found':
-            return 'لا يوجد حساب بهذا البريد الإلكتروني';
-        case 'auth/wrong-password':
-            return 'كلمة المرور غير صحيحة';
-        case 'auth/email-already-in-use':
-            return 'هذا البريد الإلكتروني مستخدم بالفعل';
-        case 'auth/weak-password':
-            return 'كلمة المرور ضعيفة جدًا';
-        case 'auth/operation-not-allowed':
-            return 'هذه العملية غير مسموحة';
-        default:
-            return 'حدث خطأ غير متوقع';
-    }
+    const errors = {
+        'auth/invalid-email': 'البريد الإلكتروني غير صالح',
+        'auth/user-disabled': 'هذا الحساب معطل',
+        'auth/user-not-found': 'لا يوجد حساب بهذا البريد الإلكتروني',
+        'auth/wrong-password': 'كلمة المرور غير صحيحة',
+        'auth/email-already-in-use': 'هذا البريد الإلكتروني مستخدم بالفعل',
+        'auth/weak-password': 'كلمة المرور ضعيفة جدًا',
+        'auth/operation-not-allowed': 'هذه العملية غير مسموحة',
+        'auth/network-request-failed': 'فشل الاتصال بالشبكة'
+    };
+    return errors[errorCode] || 'حدث خطأ غير متوقع';
 }
