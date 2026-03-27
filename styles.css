@@ -1,4 +1,10 @@
-/* Custom Scrollbar */
+/* إعدادات الخط والتوجيه */
+body {
+    direction: rtl;
+    font-family: 'Inter', sans-serif;
+}
+
+/* التمرير المخصص */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
@@ -11,14 +17,14 @@
     border-radius: 10px;
 }
 
-/* Chat Wallpaper Pattern */
+/* خلفية الدردشة بنمط شبكي */
 .bg-chat-pattern {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill='%232481cc' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9l11 6.33 11-6.33-11-6.34L3 17.9zM0 15l14-8 14 8v14l-14 8-14-8v-14z'/%3E%3C/g%3E%3C/svg%3E");
     background-repeat: repeat;
     background-color: #080d14;
 }
 
-/* Message Bubbles with SVG Tails */
+/* فقاعات الرسائل */
 .message-bubble {
     max-width: 65%;
     padding: 8px 12px;
@@ -29,52 +35,46 @@
     line-height: 1.4;
     transition: all 0.1s ease;
 }
-
 .message-outgoing {
     background: #2b5278;
-    border-top-right-radius: 4px;
+    border-top-left-radius: 4px;
     margin-left: auto;
     align-self: flex-end;
 }
 .message-outgoing::after {
     content: '';
     position: absolute;
-    right: -8px;
+    left: -8px;
     top: 0;
     width: 12px;
     height: 18px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath fill='%232b5278' d='M0 0 L8 0 L8 13 L0 13 Z'/%3E%3C/svg%3E") no-repeat;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath fill='%232b5278' d='M8 0 L0 0 L0 13 L8 13 Z'/%3E%3C/svg%3E") no-repeat;
     background-size: contain;
+    transform: scaleX(-1);
 }
-
 .message-incoming {
     background: #182533;
-    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
     margin-right: auto;
     align-self: flex-start;
 }
 .message-incoming::before {
     content: '';
     position: absolute;
-    left: -8px;
+    right: -8px;
     top: 0;
     width: 12px;
     height: 18px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath fill='%23182533' d='M8 0 L0 0 L0 13 L8 13 Z'/%3E%3C/svg%3E") no-repeat;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Cpath fill='%23182533' d='M0 0 L8 0 L8 13 L0 13 Z'/%3E%3C/svg%3E") no-repeat;
     background-size: contain;
 }
-
-/* Read Receipt Double Check */
 .read-receipt {
     font-size: 12px;
-    margin-left: 6px;
+    margin-right: 6px;
     color: #6ab0f3;
 }
-.read-receipt i {
-    margin-left: 2px;
-}
 
-/* Typing Indicator Animation */
+/* مؤشر الكتابة */
 .typing-dots {
     display: inline-flex;
     gap: 3px;
@@ -94,7 +94,7 @@
     40% { transform: scale(1); opacity: 1; }
 }
 
-/* Folder Icons */
+/* أيقونات المجلدات */
 .folder-icon {
     display: flex;
     flex-direction: column;
@@ -114,14 +114,12 @@
 .folder-icon:hover {
     background: #2c3e50;
 }
-
-/* Admin badge */
 .admin-folder {
     margin-top: auto;
     margin-bottom: 20px;
 }
 
-/* Context Menu */
+/* قائمة السياق */
 #contextMenu div {
     padding: 8px 12px;
     cursor: pointer;
@@ -130,7 +128,7 @@
     background: #2481cc30;
 }
 
-/* Voice note waveform placeholder */
+/* موجات صوتية */
 .voice-wave {
     display: flex;
     align-items: center;
@@ -149,11 +147,16 @@
     100% { height: 4px; }
 }
 
-/* Circular Video Message */
+/* فيديو دائري */
 .circular-video {
     width: 200px;
     height: 200px;
     border-radius: 50%;
     object-fit: cover;
-    background: black;
+    background: #000;
+}
+
+/* عنصر المحادثة في القائمة */
+.chat-item {
+    transition: background 0.1s;
 }
