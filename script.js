@@ -1,49 +1,38 @@
 // ============================================
-// TELGRAMI - MAIN APPLICATION
+// TELEGRAMI - Complete Telegram Clone
 // ============================================
 
 // ==================== CLASSES ====================
 
 class ChatManager {
     constructor() {
-        this.messageListeners = [];
-        this.typingListeners = [];
+        this.listeners = [];
     }
 
-    async createPrivateChat(userId, targetUserId) {
-        try {
-            const existing = await this.findPrivateChat(userId, targetUserId);
-            if (existing) return existing;
-
-            const chatId = generateId();
-            const chatData = {
-                type: 'private',
-                participants: [userId, targetUserId],
-                createdAt: new Date().toISOString(),
-                lastMessage: null
-            };
-            
-            await db.ref(`chats/${chatId}`).set(chatData);
-            await db.ref(`userChats/${userId}/${chatId}`).set(true);
-            await db.ref(`userChats/${targetUserId}/${chatId}`).set(true);
-            
-            return { id: chatId, ...chatData };
-        } catch (error) {
-            console.error("Error creating private chat:", error);
-            throw error;
-        }
+    async createPrivateChat(userId, targetId) {
+        const existing = await this.findPrivateChat(userId, targetId);
+        if (existing) return existing;
+        
+        const chatId = generateId();
+        await db.ref(`chats/${chatId}`).set({
+            type: 'private',
+            participants: [userId, targetId],
+            createdAt: new Date().toISOString(),
+            lastMessage: null
+        });
+        await db.ref(`userChats/${userId}/${chatId}`).set(true);
+        await db.ref(`userChats/${targetId}/${chatId}`).set(true);
+        return { id: chatId, type: 'private', participants: [userId, targetId] };
     }
     
-    async findPrivateChat(userId, targetUserId) {
-        const userChats = await db.ref(`userChats/${userId}`).once('value');
-        if (!userChats.exists()) return null;
+    async findPrivateChat(userId, targetId) {
+        const chats = await db.ref(`userChats/${userId}`).once('value');
+        if (!chats.exists()) return null;
         
-        const chats = userChats.val();
-        for (const chatId in chats) {
+        for (const chatId in chats.val()) {
             const chat = await db.ref(`chats/${chatId}`).once('value');
             if (chat.exists() && chat.val().type === 'private') {
-                const participants = chat.val().participants;
-                if (participants.includes(userId) && participants.includes(targetUserId)) {
+                if (chat.val().participants.includes(targetId)) {
                     return { id: chatId, ...chat.val() };
                 }
             }
@@ -51,111 +40,84 @@ class ChatManager {
         return null;
     }
     
-    async createGroup(name, creatorId, participants = []) {
+    async createGroup(name, creatorId) {
         const groupId = generateId();
-        const groupData = {
+        await db.ref(`chats/${groupId}`).set({
             type: 'group',
             name: name,
-            participants: [creatorId, ...participants],
+            participants: [creatorId],
             admins: [creatorId],
             createdBy: creatorId,
-            createdAt: new Date().toISOString(),
-            lastMessage: null
-        };
-        
-        await db.ref(`chats/${groupId}`).set(groupData);
-        for (const p of [creatorId, ...participants]) {
-            await db.ref(`userChats/${p}/${groupId}`).set(true);
-        }
-        return { id: groupId, ...groupData };
+            createdAt: new Date().toISOString()
+        });
+        await db.ref(`userChats/${creatorId}/${groupId}`).set(true);
+        return { id: groupId, type: 'group', name: name };
     }
     
     async sendMessage(chatId, senderId, text, type = 'text', mediaUrl = null) {
-        const messageId = generateId();
+        const msgId = generateId();
         const timestamp = new Date().toISOString();
-        
-        const messageData = {
+        await db.ref(`messages/${chatId}/${msgId}`).set({
             senderId, text, type, mediaUrl,
-            edited: false, deleted: false,
-            seen: [senderId],
-            timestamp
-        };
-        
-        await db.ref(`messages/${chatId}/${messageId}`).set(messageData);
-        await db.ref(`chats/${chatId}/lastMessage`).set({
-            text: text.length > 50 ? text.substring(0, 50) + '...' : text,
-            senderId, timestamp
+            seen: [senderId], timestamp, edited: false, deleted: false
         });
-        
-        return messageId;
+        await db.ref(`chats/${chatId}/lastMessage`).set({
+            text: text.substring(0, 50), senderId, timestamp
+        });
+        return msgId;
     }
     
     loadMessages(chatId, callback) {
         const ref = db.ref(`messages/${chatId}`).orderByChild('timestamp');
-        const listener = ref.on('value', (snapshot) => {
-            const messages = [];
-            snapshot.forEach(child => messages.push({ id: child.key, ...child.val() }));
-            callback(messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)));
+        const listener = ref.on('value', (snap) => {
+            const msgs = [];
+            snap.forEach(c => msgs.push({ id: c.key, ...c.val() }));
+            callback(msgs.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)));
         });
-        this.messageListeners.push({ chatId, listener });
+        this.listeners.push(listener);
         return () => ref.off('value', listener);
     }
     
-    setTyping(chatId, userId, isTyping) {
+    setTyping(chatId, userId, typing) {
         const ref = db.ref(`typing/${chatId}/${userId}`);
-        if (isTyping) {
-            ref.set({ isTyping: true, timestamp: new Date().toISOString() });
+        if (typing) {
+            ref.set({ typing: true, timestamp: new Date().toISOString() });
             setTimeout(() => ref.remove(), 3000);
         } else ref.remove();
     }
     
     onTyping(chatId, callback) {
         const ref = db.ref(`typing/${chatId}`);
-        const listener = ref.on('value', (snapshot) => {
+        const listener = ref.on('value', (snap) => {
             const users = [];
-            snapshot.forEach(child => { if (child.val().isTyping) users.push(child.key); });
+            snap.forEach(c => { if (c.val().typing) users.push(c.key); });
             callback(users);
         });
-        this.typingListeners.push({ chatId, listener });
         return () => ref.off('value', listener);
-    }
-    
-    cleanup() {
-        this.messageListeners.forEach(({ chatId, listener }) => 
-            db.ref(`messages/${chatId}`).off('value', listener));
-        this.typingListeners.forEach(({ chatId, listener }) => 
-            db.ref(`typing/${chatId}`).off('value', listener));
-        this.messageListeners = [];
-        this.typingListeners = [];
     }
 }
 
 class StoryManager {
-    async createStory(userId, type, content, mediaUrl = null) {
-        const storyId = generateId();
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        
-        await db.ref(`stories/${storyId}`).set({
-            userId, type, content, mediaUrl,
+    async createStory(userId, type, content, media = null) {
+        const id = generateId();
+        const expires = new Date(Date.now() + 24*60*60*1000);
+        await db.ref(`stories/${id}`).set({
+            userId, type, content, media,
             createdAt: new Date().toISOString(),
-            expiresAt: expiresAt.toISOString(),
+            expiresAt: expires.toISOString(),
             viewers: []
         });
-        return storyId;
+        return id;
     }
     
     loadStories(userId, callback) {
         const ref = db.ref('stories').orderByChild('expiresAt').startAt(new Date().toISOString());
-        const listener = ref.on('value', (snapshot) => {
+        const listener = ref.on('value', (snap) => {
             const stories = [];
-            snapshot.forEach(child => {
-                const story = child.val();
-                if (story.userId !== userId) {
-                    stories.push({
-                        id: child.key,
-                        ...story,
-                        viewed: story.viewers?.includes(userId) || false
-                    });
+            snap.forEach(c => {
+                const s = c.val();
+                if (s.userId !== userId) {
+                    stories.push({ id: c.key, ...s, viewed: s.viewers?.includes(userId) });
                 }
             });
             callback(this.groupByUser(stories));
@@ -173,210 +135,160 @@ class StoryManager {
     }
     
     async viewStory(storyId, userId) {
-        await db.ref(`stories/${storyId}/viewers`).transaction(current => {
-            return current?.includes(userId) ? current : [...(current || []), userId];
+        await db.ref(`stories/${storyId}/viewers`).transaction(v => {
+            return v?.includes(userId) ? v : [...(v || []), userId];
         });
     }
 }
 
 class CallManager {
-    constructor() {
-        this.localStream = null;
-        this.currentCall = null;
-        this.configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    }
-    
     async startCall(callerId, receiverId, type = 'voice') {
-        const callId = generateId();
-        await db.ref(`calls/${callId}`).set({
-            type, callerId, receiverId, status: 'initiating',
-            startedAt: new Date().toISOString(), duration: 0
+        const id = generateId();
+        await db.ref(`calls/${id}`).set({
+            type, callerId, receiverId, status: 'ringing',
+            startedAt: new Date().toISOString()
         });
-        this.currentCall = { id: callId, type, callerId, receiverId };
-        this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-        return callId;
+        return id;
     }
     
     async endCall(callId) {
-        const call = await db.ref(`calls/${callId}`).once('value');
-        if (call.exists()) {
-            const data = call.val();
-            const duration = Math.floor((new Date() - new Date(data.startedAt)) / 1000);
-            await db.ref(`calls/${callId}`).update({ status: 'ended', duration });
-        }
-        this.localStream?.getTracks().forEach(t => t.stop());
-        this.localStream = null;
-        this.currentCall = null;
+        await db.ref(`calls/${callId}`).update({ status: 'ended', endedAt: new Date().toISOString() });
     }
     
-    onIncomingCall(userId, callback) {
+    onIncoming(userId, callback) {
         const ref = db.ref('calls').orderByChild('receiverId').equalTo(userId);
-        return ref.on('child_added', (snapshot) => {
-            if (snapshot.val().status === 'initiating') callback({ id: snapshot.key, ...snapshot.val() });
+        return ref.on('child_added', snap => {
+            if (snap.val().status === 'ringing') callback({ id: snap.key, ...snap.val() });
         });
     }
 }
 
-// ==================== INITIALIZE ====================
+// ==================== INIT ====================
 const chatManager = new ChatManager();
 const storyManager = new StoryManager();
 const callManager = new CallManager();
 
-// ==================== GLOBAL VARIABLES ====================
 let currentUser = null;
 let isAdmin = false;
 let currentChatId = null;
-let messageListener = null;
+let msgListener = null;
 let typingListener = null;
 let storiesListener = null;
 let typingTimeout = null;
 
-// ==================== AUTH FUNCTIONS ====================
-
+// ==================== AUTH ====================
 async function login() {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value.trim();
     const errorEl = document.getElementById('login-error');
-    const btn = document.getElementById('login-button');
-    
-    if (!email || !password) {
-        errorEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
-        return;
-    }
+    if (!email || !password) return errorEl.textContent = 'املأ جميع الحقول';
     errorEl.textContent = '';
-    btn.disabled = true;
-    btn.textContent = 'جاري...';
-    
     try {
         await auth.signInWithEmailAndPassword(email, password);
-        showToast('تم تسجيل الدخول بنجاح', 'success');
-    } catch (error) {
-        errorEl.textContent = getAuthErrorMessage(error.code);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'دخول';
+        showToast('مرحباً بك', 'success');
+    } catch(e) {
+        errorEl.textContent = getAuthErrorMessage(e.code);
     }
 }
 
 async function register() {
     const name = document.getElementById('register-name').value.trim();
     const email = document.getElementById('register-email').value.trim();
-    const password = document.getElementById('register-password').value.trim();
+    const pass = document.getElementById('register-password').value.trim();
     const confirm = document.getElementById('register-confirm-password').value.trim();
     const errorEl = document.getElementById('register-error');
-    const successEl = document.getElementById('register-success');
-    const btn = document.getElementById('register-button');
-    
-    if (!name || !email || !password || !confirm) {
-        errorEl.textContent = 'يرجى ملء جميع الحقول';
-        return;
-    }
-    if (password !== confirm) {
-        errorEl.textContent = 'كلمات المرور غير متطابقة';
-        return;
-    }
-    if (password.length < 6) {
-        errorEl.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-        return;
-    }
+    if (!name || !email || !pass) return errorEl.textContent = 'املأ جميع الحقول';
+    if (pass !== confirm) return errorEl.textContent = 'كلمات المرور غير متطابقة';
+    if (pass.length < 6) return errorEl.textContent = 'كلمة المرور 6 أحرف على الأقل';
     errorEl.textContent = '';
-    btn.disabled = true;
-    btn.textContent = 'جاري...';
-    
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        await db.ref(`users/${userCredential.user.uid}`).set({
-            name, email, avatar: null, bio: '',
-            lastSeen: new Date().toISOString(), status: 'online',
-            createdAt: new Date().toISOString(), contacts: [], blockedUsers: [], isAdmin: false
+        const { user } = await auth.createUserWithEmailAndPassword(email, pass);
+        await db.ref(`users/${user.uid}`).set({
+            name, email, avatar: null,
+            createdAt: new Date().toISOString(),
+            status: 'online'
         });
-        successEl.textContent = 'تم إنشاء الحساب بنجاح!';
-        setTimeout(() => document.getElementById('login-tab').click(), 1500);
-    } catch (error) {
-        errorEl.textContent = getAuthErrorMessage(error.code);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'إنشاء حساب';
+        showToast('تم إنشاء الحساب', 'success');
+        document.getElementById('login-tab').click();
+    } catch(e) {
+        errorEl.textContent = getAuthErrorMessage(e.code);
     }
 }
 
-async function checkAdminStatus(email) {
+async function checkAdmin(email) {
     if (email === 'jasim28v@gmail.com') {
-        const code = prompt('أدخل رمز المشرف:');
+        const code = prompt('رمز المشرف:');
         isAdmin = code === 'vv2314vv';
     }
     return isAdmin;
 }
 
-// ==================== UI FUNCTIONS ====================
-
-function showAuthScreen() {
+// ==================== UI ====================
+function showAuth() {
     document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('app-container').style.display = 'none';
 }
 
-function showChatInterface() {
+function showApp() {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
 }
 
-function toggleMobileMenu() {
-    document.getElementById('sidebar').classList.toggle('open');
-}
-
-function switchMainTab(tab) {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add('active');
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
     document.getElementById('chats-view').classList.toggle('hidden', tab !== 'chats');
     document.getElementById('stories-view').classList.toggle('hidden', tab !== 'stories');
     document.getElementById('calls-view').classList.toggle('hidden', tab !== 'calls');
     if (tab === 'stories') loadStories();
 }
 
-function searchChats() {
-    const query = document.getElementById('search-input').value.toLowerCase();
-    document.querySelectorAll('.chat-item').forEach(item => {
-        const name = item.querySelector('.chat-name')?.textContent.toLowerCase();
-        item.style.display = name?.includes(query) ? 'flex' : 'none';
-    });
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
 }
 
-// ==================== CHAT FUNCTIONS ====================
+function closeSidebar() {
+    if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+    }
+}
 
-async function loadUserChats() {
-    const chatsList = document.getElementById('chats-list');
-    chatsList.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+// ==================== CHATS ====================
+async function loadChats() {
+    const list = document.getElementById('chats-list');
+    list.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
     
-    const snapshot = await db.ref(`userChats/${currentUser.uid}`).once('value');
-    if (!snapshot.exists()) {
-        chatsList.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>لا توجد محادثات بعد</p></div>';
+    const userChats = await db.ref(`userChats/${currentUser.uid}`).once('value');
+    if (!userChats.exists()) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>ابدأ محادثة جديدة</p></div>';
         return;
     }
     
-    chatsList.innerHTML = '';
-    for (const chatId of Object.keys(snapshot.val())) {
-        const chatSnap = await db.ref(`chats/${chatId}`).once('value');
-        if (chatSnap.exists()) addChatToUI(chatId, chatSnap.val());
+    list.innerHTML = '';
+    for (const chatId of Object.keys(userChats.val())) {
+        const chat = await db.ref(`chats/${chatId}`).once('value');
+        if (chat.exists()) addChatToUI(chatId, chat.val());
     }
 }
 
 function addChatToUI(chatId, chat) {
-    const chatsList = document.getElementById('chats-list');
-    let name = chat.name, avatar = chat.name?.charAt(0) || 'G';
+    const list = document.getElementById('chats-list');
+    let name = chat.name || 'محادثة';
+    let avatar = name.charAt(0);
     
     if (chat.type === 'private') {
         const otherId = chat.participants.find(id => id !== currentUser.uid);
         db.ref(`users/${otherId}`).once('value').then(s => {
             if (s.exists()) {
                 name = s.val().name;
-                avatar = s.val().avatar || name.charAt(0);
+                avatar = name.charAt(0);
                 nameEl.textContent = escapeHtml(name);
                 avatarEl.textContent = avatar;
             }
         });
     }
     
-    const lastMsg = chat.lastMessage?.text || 'لا توجد رسائل';
+    const lastMsg = chat.lastMessage?.text || 'رسالة جديدة';
     const time = chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : '';
     
     const item = document.createElement('div');
@@ -388,28 +300,33 @@ function addChatToUI(chatId, chat) {
             <div class="chat-name">${escapeHtml(name)}</div>
             <div class="chat-preview">${escapeHtml(lastMsg)}</div>
         </div>
-        <div class="chat-time">${time}</div>
+        <div class="chat-meta">
+            <div class="chat-time">${time}</div>
+        </div>
     `;
-    item.addEventListener('click', () => openChat(chatId, chat));
-    chatsList.appendChild(item);
+    item.onclick = () => openChat(chatId, chat);
+    list.appendChild(item);
     
     const nameEl = item.querySelector('.chat-name');
     const avatarEl = item.querySelector('.chat-avatar');
 }
 
 function openChat(chatId, chat) {
-    if (messageListener) messageListener();
+    if (msgListener) msgListener();
     if (typingListener) typingListener();
     
     currentChatId = chatId;
     
-    let name = chat.name, avatar = chat.name?.charAt(0) || 'G';
+    let name = chat.name || 'محادثة';
+    let avatar = name.charAt(0);
+    
     if (chat.type === 'private') {
         const otherId = chat.participants.find(id => id !== currentUser.uid);
         db.ref(`users/${otherId}`).once('value').then(s => {
             if (s.exists()) {
                 document.getElementById('chat-header-name').textContent = s.val().name;
                 document.getElementById('chat-header-avatar').textContent = s.val().avatar || s.val().name.charAt(0);
+                document.getElementById('chat-header-status').textContent = s.val().status === 'online' ? 'متصل' : 'غير متصل';
             }
         });
     } else {
@@ -417,16 +334,16 @@ function openChat(chatId, chat) {
         document.getElementById('chat-header-avatar').textContent = avatar;
     }
     
-    messageListener = chatManager.loadMessages(chatId, displayMessages);
+    msgListener = chatManager.loadMessages(chatId, displayMessages);
     typingListener = chatManager.onTyping(chatId, (users) => {
-        const indicator = document.getElementById('typing-indicator');
+        const ind = document.getElementById('typing-indicator');
         if (users.length && users[0] !== currentUser.uid) {
-            indicator.style.display = 'flex';
-            indicator.textContent = 'يكتب...';
-        } else indicator.style.display = 'none';
+            ind.style.display = 'flex';
+            ind.textContent = 'يكتب...';
+        } else ind.style.display = 'none';
     });
     
-    if (window.innerWidth <= 768) toggleMobileMenu();
+    closeSidebar();
     document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
     document.querySelector(`.chat-item[data-chat-id="${chatId}"]`)?.classList.add('active');
 }
@@ -450,13 +367,20 @@ function displayMessages(messages) {
         const div = document.createElement('div');
         div.className = `message ${isMe ? 'sent' : 'received'}`;
         
-        if (msg.type === 'text') div.innerHTML = `<div class="message-text">${escapeHtml(msg.text)}</div>`;
-        else if (msg.type === 'image') div.innerHTML = `<img src="${msg.mediaUrl}" class="message-image" onclick="openImage('${msg.mediaUrl}')">`;
-        else if (msg.type === 'video') div.innerHTML = `<video src="${msg.mediaUrl}" controls class="message-video"></video>`;
+        if (msg.type === 'text') {
+            div.innerHTML = `<div class="message-text">${escapeHtml(msg.text)}</div>`;
+        } else if (msg.type === 'image') {
+            div.innerHTML = `<img src="${msg.mediaUrl}" style="max-width: 200px; border-radius: 12px; cursor: pointer;" onclick="openImage('${msg.mediaUrl}')">`;
+        } else if (msg.type === 'video') {
+            div.innerHTML = `<video src="${msg.mediaUrl}" controls style="max-width: 200px; border-radius: 12px;"></video>`;
+        }
         
-        div.innerHTML += `<div class="message-time">${formatTime(msg.timestamp)}</div>`;
-        if (isMe) div.innerHTML += `<div class="message-seen"><i class="fas fa-check-double"></i></div>`;
-        if (msg.edited) div.innerHTML += `<span class="message-edited">(معدلة)</span>`;
+        div.innerHTML += `
+            <div class="message-meta">
+                <span class="message-time">${formatTime(msg.timestamp)}</span>
+                ${isMe ? `<span class="message-seen"><i class="fas fa-check-double"></i></span>` : ''}
+            </div>
+        `;
         
         container.appendChild(div);
     }
@@ -467,7 +391,6 @@ async function sendMessage() {
     const input = document.getElementById('message-input');
     const text = input.value.trim();
     if (!text || !currentChatId) return;
-    
     await chatManager.sendMessage(currentChatId, currentUser.uid, text);
     input.value = '';
     input.style.height = 'auto';
@@ -484,33 +407,32 @@ function handleTyping() {
 async function createNewChat() {
     const type = prompt('اختر:\n1 - محادثة خاصة\n2 - مجموعة');
     if (type === '1') {
-        const email = prompt('أدخل البريد الإلكتروني للمستخدم:');
+        const email = prompt('البريد الإلكتروني للمستخدم:');
         if (email) {
             const users = await db.ref('users').orderByChild('email').equalTo(email).once('value');
             if (users.exists()) {
                 const targetId = Object.keys(users.val())[0];
-                if (targetId === currentUser.uid) return alert('لا يمكنك المحادثة مع نفسك');
-                const chat = await chatManager.findPrivateChat(currentUser.uid, targetId);
-                if (chat) openChat(chat.id, chat);
+                if (targetId === currentUser.uid) return showToast('لا يمكن المحادثة مع نفسك');
+                const existing = await chatManager.findPrivateChat(currentUser.uid, targetId);
+                if (existing) openChat(existing.id, existing);
                 else {
                     const newChat = await chatManager.createPrivateChat(currentUser.uid, targetId);
                     openChat(newChat.id, newChat);
-                    loadUserChats();
+                    loadChats();
                 }
-            } else alert('المستخدم غير موجود');
+            } else showToast('المستخدم غير موجود');
         }
     } else if (type === '2') {
-        const name = prompt('أدخل اسم المجموعة:');
+        const name = prompt('اسم المجموعة:');
         if (name) {
             const newChat = await chatManager.createGroup(name, currentUser.uid);
             openChat(newChat.id, newChat);
-            loadUserChats();
+            loadChats();
         }
     }
 }
 
-// ==================== STORIES FUNCTIONS ====================
-
+// ==================== STORIES ====================
 function loadStories() {
     if (storiesListener) storiesListener();
     storiesListener = storyManager.loadStories(currentUser.uid, displayStories);
@@ -520,7 +442,7 @@ function displayStories(groups) {
     const container = document.getElementById('stories-container');
     container.innerHTML = `
         <div class="story-item my-story" onclick="showStoryCreator()">
-            <div class="story-avatar"><i class="fas fa-plus"></i></div>
+            <div class="story-ring"><div class="story-avatar"><i class="fas fa-plus"></i></div></div>
             <div class="story-name">قصتي</div>
         </div>
     `;
@@ -529,47 +451,53 @@ function displayStories(groups) {
         item.className = `story-item ${group.stories[0].viewed ? 'viewed' : ''}`;
         db.ref(`users/${group.userId}/name`).once('value').then(s => {
             const name = s.val() || 'مستخدم';
-            item.innerHTML = `<div class="story-avatar">${name.charAt(0)}</div><div class="story-name">${escapeHtml(name)}</div>`;
+            item.innerHTML = `
+                <div class="story-ring"><div class="story-avatar">${name.charAt(0)}</div></div>
+                <div class="story-name">${escapeHtml(name)}</div>
+            `;
         });
-        item.addEventListener('click', () => openStoryViewer(group));
+        item.onclick = () => openStoryViewer(group);
         container.appendChild(item);
     });
 }
 
 function showStoryCreator() {
     const modal = document.createElement('div');
-    modal.className = 'story-modal';
+    modal.className = 'admin-panel';
+    modal.style.display = 'flex';
     modal.innerHTML = `
-        <div class="story-modal-content">
-            <h3>إضافة قصة جديدة</h3>
-            <div class="story-type-selector">
-                <button class="story-type-btn active" data-type="text">نص</button>
-                <button class="story-type-btn" data-type="image">صورة</button>
-                <button class="story-type-btn" data-type="video">فيديو</button>
+        <div class="admin-card" style="max-width: 350px;">
+            <div class="admin-header">
+                <h3>قصة جديدة</h3>
+                <button id="close-modal" style="background:none;border:none;color:white;font-size:24px;">&times;</button>
             </div>
-            <textarea id="story-text" class="story-text-input" placeholder="اكتب قصتك..."></textarea>
-            <input type="file" id="story-media" accept="image/*,video/*" style="display:none">
-            <div class="story-actions">
-                <button class="story-cancel">إلغاء</button>
-                <button class="story-submit">نشر</button>
+            <div style="padding: 20px;">
+                <div class="tabs" style="margin-bottom: 16px;">
+                    <button class="tab active" data-type="text">نص</button>
+                    <button class="tab" data-type="image">صورة</button>
+                    <button class="tab" data-type="video">فيديو</button>
+                </div>
+                <textarea id="story-text" placeholder="اكتب قصتك..." style="width:100%;background:var(--tg-surface-light);border:none;border-radius:16px;padding:12px;color:white;font-family:inherit;resize:none;" rows="4"></textarea>
+                <input type="file" id="story-file" accept="image/*,video/*" style="display:none">
+                <button id="publish-story" class="auth-btn" style="margin-top:16px;">نشر</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
     
     let type = 'text';
-    modal.querySelectorAll('.story-type-btn').forEach(btn => {
+    modal.querySelectorAll('[data-type]').forEach(btn => {
         btn.onclick = () => {
-            modal.querySelectorAll('.story-type-btn').forEach(b => b.classList.remove('active'));
+            modal.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             type = btn.dataset.type;
-            modal.querySelector('#story-text').style.display = type === 'text' ? 'block' : 'none';
-            modal.querySelector('#story-media').style.display = type !== 'text' ? 'block' : 'none';
-            if (type !== 'text') modal.querySelector('#story-media').click();
+            document.getElementById('story-text').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('story-file').style.display = type !== 'text' ? 'block' : 'none';
+            if (type !== 'text') document.getElementById('story-file').click();
         };
     });
     
-    modal.querySelector('#story-media').onchange = async (e) => {
+    document.getElementById('story-file').onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const fd = new FormData();
@@ -577,217 +505,198 @@ function showStoryCreator() {
         fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
         const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: 'POST', body: fd });
         const data = await res.json();
-        modal.dataset.mediaUrl = data.secure_url;
+        modal.dataset.media = data.secure_url;
     };
     
-    modal.querySelector('.story-submit').onclick = async () => {
+    document.getElementById('publish-story').onclick = async () => {
         let content = '', media = null;
-        if (type === 'text') content = modal.querySelector('#story-text').value;
-        else media = modal.dataset.mediaUrl;
+        if (type === 'text') content = document.getElementById('story-text').value;
+        else media = modal.dataset.media;
         if ((type === 'text' && !content) || ((type === 'image' || type === 'video') && !media)) {
-            return alert('الرجاء إدخال محتوى القصة');
+            return showToast('أدخل محتوى القصة');
         }
         await storyManager.createStory(currentUser.uid, type, content, media);
         modal.remove();
         loadStories();
-        showToast('تم نشر القصة بنجاح', 'success');
+        showToast('تم نشر القصة');
     };
-    modal.querySelector('.story-cancel').onclick = () => modal.remove();
+    
+    document.getElementById('close-modal').onclick = () => modal.remove();
 }
 
 function openStoryViewer(group) {
     let index = 0;
+    const stories = group.stories;
     const viewer = document.createElement('div');
     viewer.className = 'story-viewer';
     viewer.innerHTML = `
-        <div class="story-viewer-content">
-            <div class="story-progress-bars"></div>
-            <div class="story-content"></div>
-            <div class="story-nav"><button class="story-prev"><i class="fas fa-chevron-right"></i></button><button class="story-next"><i class="fas fa-chevron-left"></i></button></div>
-            <button class="story-close"><i class="fas fa-times"></i></button>
+        <div class="story-viewer-header">
+            <div class="story-viewer-avatar">${group.userId.charAt(0)}</div>
+            <div>
+                <div class="story-viewer-name" id="story-user-name">...</div>
+                <div class="story-viewer-time" id="story-time"></div>
+            </div>
+            <button class="story-close" id="close-viewer"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="story-progress" id="story-progress"></div>
+        <div class="story-content" id="story-content"></div>
+        <div style="position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;">
+            <button id="prev-story" style="background:rgba(0,0,0,0.5);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;"><i class="fas fa-chevron-right"></i></button>
+            <button id="next-story" style="background:rgba(0,0,0,0.5);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
         </div>
     `;
     document.body.appendChild(viewer);
+    
+    db.ref(`users/${group.userId}/name`).once('value').then(s => {
+        viewer.querySelector('#story-user-name').textContent = s.val() || 'مستخدم';
+    });
     
     let interval, timeout;
     
     function loadStory(i) {
         if (interval) clearInterval(interval);
         if (timeout) clearTimeout(timeout);
-        const story = group.stories[i];
-        const bars = viewer.querySelector('.story-progress-bars');
-        bars.innerHTML = '';
-        group.stories.forEach((_, idx) => {
+        const story = stories[i];
+        
+        const progress = viewer.querySelector('#story-progress');
+        progress.innerHTML = '';
+        stories.forEach((_, idx) => {
             const bar = document.createElement('div');
             bar.className = 'story-progress-bar';
-            if (idx < i) bar.style.cssText = 'background: white;';
-            else if (idx === i) { startProgress(bar); }
-            bars.appendChild(bar);
+            bar.innerHTML = '<div class="fill"></div>';
+            if (idx < i) bar.querySelector('.fill').style.width = '100%';
+            else if (idx === i) {
+                let width = 0;
+                interval = setInterval(() => {
+                    width += 2;
+                    bar.querySelector('.fill').style.width = width + '%';
+                    if (width >= 100) clearInterval(interval);
+                }, 100);
+            }
+            progress.appendChild(bar);
         });
         
-        const content = viewer.querySelector('.story-content');
+        const content = viewer.querySelector('#story-content');
         if (story.type === 'text') content.innerHTML = `<div class="story-text">${escapeHtml(story.content)}</div>`;
-        else if (story.type === 'image') content.innerHTML = `<img src="${story.mediaUrl}">`;
-        else if (story.type === 'video') content.innerHTML = `<video src="${story.mediaUrl}" autoplay></video>`;
+        else if (story.type === 'image') content.innerHTML = `<img src="${story.media}">`;
+        else if (story.type === 'video') content.innerHTML = `<video src="${story.media}" autoplay></video>`;
         
+        viewer.querySelector('#story-time').textContent = formatTime(story.createdAt);
         storyManager.viewStory(story.id, currentUser.uid);
+        
         timeout = setTimeout(() => {
-            if (i + 1 < group.stories.length) loadStory(i + 1);
+            if (i + 1 < stories.length) loadStory(i + 1);
             else viewer.remove();
         }, 5000);
     }
     
-    function startProgress(bar) {
-        let width = 0;
-        interval = setInterval(() => {
-            width += 2;
-            bar.style.background = 'white';
-            bar.style.width = width + '%';
-            if (width >= 100) clearInterval(interval);
-        }, 100);
-    }
-    
-    viewer.querySelector('.story-prev').onclick = () => { if (index > 0) { index--; loadStory(index); } };
-    viewer.querySelector('.story-next').onclick = () => { if (index + 1 < group.stories.length) { index++; loadStory(index); } else viewer.remove(); };
-    viewer.querySelector('.story-close').onclick = () => viewer.remove();
+    viewer.querySelector('#prev-story').onclick = () => { if (index > 0) { index--; loadStory(index); } };
+    viewer.querySelector('#next-story').onclick = () => { if (index + 1 < stories.length) { index++; loadStory(index); } else viewer.remove(); };
+    viewer.querySelector('#close-viewer').onclick = () => viewer.remove();
     loadStory(0);
 }
 
-// ==================== ADMIN FUNCTIONS ====================
-
-async function showAdminPanel() {
-    if (!isAdmin) return alert('هذه الميزة للمشرفين فقط');
+// ==================== ADMIN ====================
+async function showAdmin() {
+    if (!isAdmin) return showToast('هذه الميزة للمشرفين فقط');
     const panel = document.getElementById('admin-panel');
     const content = document.getElementById('admin-content-area');
-    content.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+    content.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div>';
     panel.style.display = 'flex';
     
     const users = await db.ref('users').once('value');
     const chats = await db.ref('chats').once('value');
-    let msgCount = 0;
-    const msgs = await db.ref('messages').once('value');
-    msgs.forEach(chat => msgCount += Object.keys(chat.val() || {}).length);
+    let msgs = 0;
+    const allMsgs = await db.ref('messages').once('value');
+    allMsgs.forEach(c => msgs += Object.keys(c.val() || {}).length);
     
     content.innerHTML = `
         <div class="admin-stats">
-            <div class="stat-card"><i class="fas fa-users"></i><span>${users.numChildren()}</span><label>مستخدمين</label></div>
-            <div class="stat-card"><i class="fas fa-comments"></i><span>${chats.numChildren()}</span><label>محادثات</label></div>
-            <div class="stat-card"><i class="fas fa-envelope"></i><span>${msgCount}</span><label>رسائل</label></div>
+            <div class="stat"><i class="fas fa-users"></i><span>${users.numChildren()}</span><label>مستخدم</label></div>
+            <div class="stat"><i class="fas fa-comments"></i><span>${chats.numChildren()}</span><label>محادثة</label></div>
+            <div class="stat"><i class="fas fa-envelope"></i><span>${msgs}</span><label>رسالة</label></div>
         </div>
-        <div class="admin-section"><h5>المستخدمين</h5><div id="admin-users-list"></div></div>
-        <div class="admin-section"><h5>الإعدادات</h5><button id="clear-all" class="admin-btn danger">مسح جميع الرسائل</button></div>
+        <div class="admin-users">
+            <h4>المستخدمين</h4>
+            <div id="admin-users-list"></div>
+        </div>
+        <div style="padding:16px;border-top:1px solid var(--tg-border);">
+            <button id="clear-msgs" class="admin-btn" style="background:var(--tg-red);">مسح كل الرسائل</button>
+        </div>
     `;
     
     const list = document.getElementById('admin-users-list');
     users.forEach(snap => {
-        const user = snap.val();
+        const u = snap.val();
         list.innerHTML += `
-            <div class="admin-user-item">
-                <span>${escapeHtml(user.name)} (${user.email})</span>
-                <button class="admin-btn danger" data-uid="${snap.key}">حذف</button>
+            <div class="admin-user">
+                <span><strong>${escapeHtml(u.name)}</strong><br><small>${u.email}</small></span>
+                <button class="admin-btn" data-uid="${snap.key}" style="background:var(--tg-red);">حذف</button>
             </div>
         `;
     });
     
     document.querySelectorAll('[data-uid]').forEach(btn => {
         btn.onclick = async () => {
-            if (confirm('هل أنت متأكد؟')) {
+            if (confirm('حذف المستخدم؟')) {
                 await db.ref(`users/${btn.dataset.uid}`).remove();
-                showAdminPanel();
-                showToast('تم حذف المستخدم', 'success');
+                showAdmin();
             }
         };
     });
     
-    document.getElementById('clear-all').onclick = async () => {
-        if (confirm('تحذير: سيتم حذف جميع الرسائل!')) {
+    document.getElementById('clear-msgs').onclick = async () => {
+        if (confirm('مسح كل الرسائل؟')) {
             await db.ref('messages').remove();
-            showAdminPanel();
-            showToast('تم حذف جميع الرسائل', 'success');
+            showAdmin();
+            showToast('تم مسح الرسائل');
         }
     };
 }
 
-// ==================== CALL FUNCTIONS ====================
-
-function showIncomingCall(call) {
-    const modal = document.createElement('div');
-    modal.className = 'call-modal';
-    modal.innerHTML = `
-        <div class="call-modal-content">
-            <div class="caller-avatar"><i class="fas fa-phone-alt"></i></div>
-            <div class="caller-name">مكالمة واردة</div>
-            <div class="call-type">${call.type === 'voice' ? 'مكالمة صوتية' : 'مكالمة فيديو'}</div>
-            <div class="call-actions">
-                <button class="call-decline" id="decline-call"><i class="fas fa-phone-slash"></i></button>
-                <button class="call-answer" id="answer-call"><i class="fas fa-phone-alt"></i></button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById('decline-call').onclick = () => { callManager.endCall(call.id); modal.remove(); };
-    document.getElementById('answer-call').onclick = async () => {
-        await callManager.answerCall(call.id, currentUser.uid);
-        modal.remove();
-        openCallUI();
-    };
+// ==================== UPLOAD ====================
+async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: 'POST', body: fd });
+    return await res.json();
 }
 
-function openCallUI() {
-    const ui = document.createElement('div');
-    ui.className = 'call-ui';
-    ui.innerHTML = `
-        <div class="call-ui-container">
-            <video id="local-video" autoplay muted></video>
-            <video id="remote-video" autoplay></video>
-            <div class="call-controls">
-                <button class="call-control" id="toggle-mic"><i class="fas fa-microphone"></i></button>
-                <button class="call-control" id="toggle-cam"><i class="fas fa-video"></i></button>
-                <button class="call-control call-end" id="end-call"><i class="fas fa-phone-slash"></i></button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(ui);
-    document.getElementById('toggle-mic').onclick = () => {
-        const track = callManager.localStream?.getAudioTracks()[0];
-        if (track) track.enabled = !track.enabled;
-    };
-    document.getElementById('toggle-cam').onclick = () => {
-        const track = callManager.localStream?.getVideoTracks()[0];
-        if (track) track.enabled = !track.enabled;
-    };
-    document.getElementById('end-call').onclick = async () => {
-        await callManager.endCall(callManager.currentCall?.id);
-        ui.remove();
-    };
-}
-
-// ==================== INITIALIZATION ====================
-
-function initEventListeners() {
+// ==================== INIT ====================
+function initEvents() {
     document.getElementById('login-tab').onclick = () => {
         document.getElementById('login-tab').classList.add('active');
         document.getElementById('register-tab').classList.remove('active');
-        document.getElementById('login-form').style.display = 'block';
-        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('login-form').classList.remove('hidden');
+        document.getElementById('register-form').classList.add('hidden');
     };
     document.getElementById('register-tab').onclick = () => {
         document.getElementById('register-tab').classList.add('active');
         document.getElementById('login-tab').classList.remove('active');
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('register-form').style.display = 'block';
+        document.getElementById('register-form').classList.remove('hidden');
+        document.getElementById('login-form').classList.add('hidden');
     };
     document.getElementById('login-button').onclick = login;
     document.getElementById('register-button').onclick = register;
-    document.getElementById('menu-button').onclick = toggleMobileMenu;
-    document.getElementById('admin-button').onclick = showAdminPanel;
+    document.getElementById('menu-button').onclick = toggleSidebar;
+    document.getElementById('admin-button').onclick = showAdmin;
     document.getElementById('admin-close').onclick = () => document.getElementById('admin-panel').style.display = 'none';
     document.getElementById('new-chat-btn').onclick = createNewChat;
     document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('back-btn').onclick = () => document.getElementById('sidebar').classList.add('open');
     document.getElementById('message-input').onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
     document.getElementById('message-input').oninput = handleTyping;
-    document.getElementById('search-input').oninput = searchChats;
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.onclick = () => switchMainTab(tab.dataset.tab));
+    document.getElementById('search-input').oninput = (e) => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('.chat-item').forEach(item => {
+            const name = item.querySelector('.chat-name')?.textContent.toLowerCase();
+            item.style.display = name?.includes(q) ? 'flex' : 'none';
+        });
+    };
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.onclick = () => switchTab(tab.dataset.tab);
+    });
     document.getElementById('attach-btn').onclick = () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -795,56 +704,55 @@ function initEventListeners() {
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const fd = new FormData();
-            fd.append('file', file);
-            fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method: 'POST', body: fd });
-            const data = await res.json();
+            const data = await uploadFile(file);
             await chatManager.sendMessage(currentChatId, currentUser.uid, '', file.type.startsWith('image') ? 'image' : 'video', data.secure_url);
-            showToast('تم الرفع بنجاح', 'success');
+            showToast('تم الرفع');
         };
         input.click();
     };
+    document.getElementById('call-btn').onclick = () => showToast('قريباً');
+    document.getElementById('video-call-btn').onclick = () => showToast('قريباً');
 }
 
-// ==================== APP START ====================
-
 document.addEventListener('DOMContentLoaded', () => {
-    initEventListeners();
+    initEvents();
     
     auth.onAuthStateChanged(async user => {
         if (user) {
             currentUser = user;
-            const userRef = db.ref(`users/${user.uid}`);
-            const snap = await userRef.once('value');
+            const snap = await db.ref(`users/${user.uid}`).once('value');
             if (!snap.exists()) {
-                await userRef.set({
+                await db.ref(`users/${user.uid}`).set({
                     name: user.email.split('@')[0],
                     email: user.email,
                     createdAt: new Date().toISOString(),
-                    status: 'online',
-                    lastSeen: new Date().toISOString(),
-                    contacts: []
+                    status: 'online'
                 });
             }
-            await checkAdminStatus(user.email);
-            showChatInterface();
-            loadUserChats();
+            isAdmin = await checkAdmin(user.email);
+            showApp();
+            loadChats();
             loadStories();
-            callManager.onIncomingCall(user.uid, showIncomingCall);
+            callManager.onIncoming(user.uid, (call) => {
+                if (confirm(`مكالمة ${call.type === 'voice' ? 'صوتية' : 'فيديو'} واردة`)) {
+                    showToast('جاري الرد...');
+                }
+            });
             setInterval(() => {
-                if (currentUser) db.ref(`users/${currentUser.uid}/lastSeen`).set(new Date().toISOString());
+                db.ref(`users/${user.uid}/status`).set('online');
+                db.ref(`users/${user.uid}/lastSeen`).set(new Date().toISOString());
             }, 30000);
         } else {
-            showAuthScreen();
+            showAuth();
         }
     });
 });
 
 window.openImage = (url) => {
     const modal = document.createElement('div');
-    modal.className = 'image-modal';
-    modal.innerHTML = `<div class="image-modal-content"><img src="${url}" class="image-modal-img"></div>`;
+    modal.className = 'admin-panel';
+    modal.style.display = 'flex';
+    modal.innerHTML = `<div style="max-width:90%;max-height:90%;"><img src="${url}" style="max-width:100%;max-height:90vh;border-radius:16px;"></div>`;
     modal.onclick = () => modal.remove();
     document.body.appendChild(modal);
 };
