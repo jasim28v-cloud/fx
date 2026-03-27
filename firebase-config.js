@@ -1,56 +1,30 @@
-// استيراد Firebase SDKs
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-import { getDatabase, ref, set, get, push, onValue, update, remove, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query as fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot, orderBy as fsOrderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - عبد الله جاسم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Tahoma', sans-serif; }
+        .admin-container { margin: 20px; }
+        .user-card { margin: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: white; }
+    </style>
+</head>
+<body>
+    <div class="container admin-container">
+        <h2 class="text-center mb-4">لوحة التحكم</h2>
+        <div class="d-flex justify-content-between mb-3">
+            <h4>إدارة المستخدمين</h4>
+            <button id="logoutAdminBtn" class="btn btn-danger">خروج</button>
+        </div>
+        <div id="usersList"></div>
+    </div>
 
-// إعدادات Firebase (بياناتك)
-const firebaseConfig = {
-    apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
-    authDomain: "tlgr-1436a.firebaseapp.com",
-    databaseURL: "https://tlgr-1436a-default-rtdb.firebaseio.com",
-    projectId: "tlgr-1436a",
-    storageBucket: "tlgr-1436a.firebasestorage.app",
-    messagingSenderId: "128259219683",
-    appId: "1:128259219683:web:b59f803204f226a5bda5d6",
-    measurementId: "G-K4W3BBTV0G"
-};
-
-// تهيئة Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
-const firestore = getFirestore(app);
-
-// بيانات المدير
-const ADMIN_EMAIL = "jasim28v@gmail.com";
-const ADMIN_CODE = "vv2314vv";
-
-// Cloudinary Config
-const CLOUDINARY_CONFIG = {
-    cloudName: "dnillsbmi",
-    uploadPreset: "ekxzvogb"
-};
-
-// تصدير كل ما نحتاجه
-export { 
-    auth, 
-    database, 
-    firestore,
-    // Realtime Database
-    ref, set, get, push, onValue, update, remove, query, orderByChild, equalTo,
-    // Auth
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    updateProfile,
-    // Firestore
-    doc, setDoc, getDoc, collection, addDoc, fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot, fsOrderBy,
-    // Admin
-    ADMIN_EMAIL, ADMIN_CODE,
-    // Cloudinary
-    CLOUDINARY_CONFIG
-};
-
-console.log("✅ Firebase initialized successfully");
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="admin-script.js"></script>
+</body>
+</html>
