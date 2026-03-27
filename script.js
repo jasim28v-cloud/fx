@@ -23,6 +23,29 @@ document.getElementById("showLogin").addEventListener("click", (e) => {
     document.getElementById("loginScreen").style.display = "block";
 });
 
+// تسجيل مستخدم جديد
+document.getElementById("registerBtn").addEventListener("click", () => {
+    const name = document.getElementById("registerName").value;
+    const email = document.getElementById("registerEmail").value;
+    const password = document.getElementById("registerPassword").value;
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            currentUser = userCredential.user;
+            // حفظ اسم المستخدم في قاعدة البيانات
+            database.ref('users/' + currentUser.uid).set({
+                name: name,
+                email: email
+            });
+            alert("تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.");
+            document.getElementById("registerScreen").style.display = "none";
+            document.getElementById("loginScreen").style.display = "block";
+        })
+        .catch((error) => {
+            alert("فشل إنشاء الحساب: " + error.message);
+        });
+});
+
 // تسجيل دخول المستخدم
 document.getElementById("loginBtn").addEventListener("click", () => {
     const email = document.getElementById("loginEmail").value;
@@ -44,29 +67,6 @@ document.getElementById("loginBtn").addEventListener("click", () => {
         })
         .catch((error) => {
             alert("فشل تسجيل الدخول: " + error.message);
-        });
-});
-
-// تسجيل مستخدم جديد
-document.getElementById("registerBtn").addEventListener("click", () => {
-    const name = document.getElementById("registerName").value;
-    const email = document.getElementById("registerEmail").value;
-    const password = document.getElementById("registerPassword").value;
-
-    auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            currentUser = userCredential.user;
-            // حفظ اسم المستخدم في قاعدة البيانات
-            database.ref('users/' + currentUser.uid).set({
-                name: name,
-                email: email
-            });
-            alert("تم إنشاء الحساب بنجاح!");
-            document.getElementById("registerScreen").style.display = "none";
-            document.getElementById("loginScreen").style.display = "block";
-        })
-        .catch((error) => {
-            alert("فشل إنشاء الحساب: " + error.message);
         });
 });
 
@@ -211,9 +211,6 @@ function startCall(isVideo) {
         .then(stream => {
             localStream = stream;
             document.getElementById("localVideo").srcObject = stream;
-
-            // هنا يمكنك إضافة كود WebRTC للاتصال بالمستخدم الآخر
-            // هذا مثال مبسط، يمكنك استخدام مكتبة مثل SimplePeer أو Agora
         })
         .catch(error => {
             alert("فشل في بدء المكالمة: " + error.message);
