@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>موقع الدردشة - عبد الله جاسم</title>
+    <title>Connecto - تواصل مع العالم</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; font-family: 'Tahoma', sans-serif; }
@@ -18,13 +18,17 @@
         .voice-message { background: #dc3545; color: white; padding: 8px 12px; border-radius: 10px; margin: 5px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 100%; }
+        @media (max-width: 768px) {
+            .chat-container { height: 50vh; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- شاشة تسجيل الدخول -->
         <div id="loginScreen" class="login-form">
-            <h3 class="text-center mb-4">تسجيل الدخول</h3>
+            <h3 class="text-center mb-4">Connecto</h3>
+            <p class="text-center mb-4">تواصل مع العالم</p>
             <div class="mb-3">
                 <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" required>
             </div>
@@ -117,11 +121,11 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
     <script src="firebase-config.js"></script>
     <script src="script.js"></script>
 </body>
