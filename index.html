@@ -1,214 +1,227 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>كابل - Telegram Clone</title>
-  <script src="https://cdn.tailwindcss.com/3.4"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
-      --primary-bg: #0e1621;
-      --sidebar-bg: #17212b;
-      --chat-bg: #0b141a;
-      --accent: #2481cc;
-      --text-primary: #e9e9e9;
-      --text-secondary: #8e9aa0;
-      --message-in: #182533;
-      --message-out: #2b5278;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LahaChat | تسجيل الدخول</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0088cc;
+            --primary-dark: #0077b6;
+            --secondary: #f5f5f5;
+            --text-primary: #171717;
+            --text-secondary: #6c757d;
+            --border-color: #e9ecef;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
 
-    body {
-      background-color: var(--primary-bg);
-      color: var(--text-primary);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .chat-list-item {
-      transition: background-color 0.2s;
-    }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--secondary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .chat-list-item:hover {
-      background-color: rgba(36, 129, 204, 0.1);
-    }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
 
-    .chat-list-item.active {
-      background-color: rgba(36, 129, 204, 0.2);
-    }
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
 
-    .message-bubble {
-      border-radius: 18px;
-      padding: 8px 12px;
-      margin: 4px 0;
-      max-width: 70%;
-    }
+        .auth-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 400px;
+            text-align: center;
+        }
 
-    .message-in {
-      background-color: var(--message-in);
-      margin-right: auto;
-      margin-left: 10px;
-    }
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-    .message-out {
-      background-color: var(--message-out);
-      margin-left: auto;
-      margin-right: 10px;
-    }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
 
-    .chat-header {
-      backdrop-filter: blur(10px);
-      background-color: rgba(0, 0, 0, 0.3);
-    }
+        .auth-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
 
-    .sidebar {
-      backdrop-filter: blur(10px);
-      background-color: var(--sidebar-bg);
-    }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: right;
+        }
 
-    .chat-wallpaper {
-      background-color: var(--chat-bg);
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%230b141a"/><circle cx="50" cy="50" r="1" fill="%232481cc" opacity="0.1"/></svg>');
-    }
-  </style>
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            outline: none;
+            text-align: right;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .form-button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .form-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .success-message {
+            color: var(--success);
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .admin-badge {
+            background-color: var(--warning);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .auth-box {
+                width: 90%;
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
-<body class="flex h-screen">
-  <!-- قسم تسجيل الدخول -->
-  <div id="auth-section" class="min-h-screen flex items-center justify-center">
-    <div class="auth-card w-[400px] p-6 rounded-lg shadow-lg">
-      <h2 class="text-2xl font-bold mb-6 text-center">تسجيل الدخول</h2>
-      <form id="login-form">
-        <input type="email" name="loginEmail" placeholder="البريد الإلكتروني" class="w-full p-3 mb-4 rounded-lg bg-sidebar text-white" required>
-        <input type="password" name="loginPassword" placeholder="كلمة المرور" class="w-full p-3 mb-6 rounded-lg bg-sidebar text-white" required>
-        <button type="submit" class="w-full p-3 bg-accent rounded-lg font-bold">دخول</button>
-      </form>
-    </div>
-  </div>
+<body>
+    <div class="auth-container" id="auth-container">
+        <div class="auth-box">
+            <h2>LahaChat</h2>
+            <p>مرحبًا بك في منصة الدردشة</p>
 
-  <!-- قسم المحادثات -->
-  <div id="chat-section" class="flex flex-1 hidden">
-    <!-- القائمة الجانبية -->
-    <div class="sidebar w-[70px] flex flex-col items-center py-4">
-      <div class="folder-icon p-3 mb-4 rounded-lg text-accent">
-        <i class="fas fa-comment-dots text-xl"></i>
-      </div>
-      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
-        <i class="fas fa-users text-xl"></i>
-      </div>
-      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
-        <i class="fas fa-bookmark text-xl"></i>
-      </div>
-      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
-        <i class="fas fa-cog text-xl"></i>
-      </div>
-    </div>
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="login-tab">تسجيل الدخول</div>
+                <div class="auth-tab" id="register-tab">إنشاء حساب</div>
+            </div>
 
-    <!-- قائمة المحادثات -->
-    <div class="chat-list w-[350px] flex flex-col border-r border-gray-700">
-      <div class="search-bar p-3 border-b border-gray-700">
-        <input type="text" placeholder="بحث" class="w-full bg-sidebar text-white rounded-lg px-3 py-2">
-      </div>
-      <div id="chat-list-items" class="chat-list-items flex-1 overflow-y-auto">
-        <!-- سيتم ملء المحادثات هنا بواسطة JavaScript -->
-      </div>
-    </div>
+            <!-- نموذج تسجيل الدخول -->
+            <div id="login-form">
+                <div class="form-group">
+                    <input type="email" id="login-email" class="form-input" placeholder="البريد الإلكتروني">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" class="form-input" placeholder="كلمة المرور">
+                </div>
+                <div class="form-group">
+                    <button class="form-button" id="login-button">دخول</button>
+                </div>
+                <div id="login-error" class="error-message"></div>
+            </div>
 
-    <!-- نافذة المحادثة -->
-    <div class="chat-window flex-1 flex flex-col bg-chat-wallpaper">
-      <div class="chat-header p-4 flex items-center border-b border-gray-700">
-        <div class="flex items-center flex-1">
-          <img src="https://via.placeholder.com/50" class="w-12 h-12 rounded-full mr-3">
-          <div>
-            <h2 id="chat-username" class="font-bold">اختر محادثة</h2>
-            <p id="chat-status" class="text-sm text-text-secondary"></p>
-          </div>
+            <!-- نموذج إنشاء حساب -->
+            <div id="register-form" style="display: none;">
+                <div class="form-group">
+                    <input type="text" id="register-name" class="form-input" placeholder="اسم المستخدم">
+                </div>
+                <div class="form-group">
+                    <input type="email" id="register-email" class="form-input" placeholder="البريد الإلكتروني">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="register-password" class="form-input" placeholder="كلمة المرور">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="register-confirm-password" class="form-input" placeholder="تأكيد كلمة المرور">
+                </div>
+                <div class="form-group">
+                    <button class="form-button" id="register-button">إنشاء حساب</button>
+                </div>
+                <div id="register-error" class="error-message"></div>
+                <div id="register-success" class="success-message"></div>
+            </div>
         </div>
-        <div class="flex items-center">
-          <button class="p-2 mx-1 rounded-full hover:bg-sidebar"><i class="fas fa-search"></i></button>
-          <button class="p-2 mx-1 rounded-full hover:bg-sidebar"><i class="fas fa-ellipsis-v"></i></button>
-        </div>
-      </div>
-
-      <div id="messages-container" class="messages-container flex-1 overflow-y-auto p-4">
-        <!-- سيتم ملء الرسائل هنا بواسطة JavaScript -->
-      </div>
-
-      <div class="message-input-container p-4 border-t border-gray-700 flex">
-        <button class="p-2 text-text-secondary hover:text-accent"><i class="fas fa-paperclip"></i></button>
-        <input id="message-input" type="text" class="message-input flex-1 bg-sidebar text-white rounded-lg px-4 py-2 mx-2" placeholder="اكتب رسالة...">
-        <button id="send-button" class="send-button bg-accent text-white px-4 py-2 rounded-lg"><i class="fas fa-paper-plane"></i></button>
-      </div>
     </div>
-  </div>
 
-  <!-- قسم لوحة التحكم -->
-  <div id="admin-panel-section" class="flex flex-1 hidden">
-    <div class="w-full p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">لوحة التحكم</h1>
-        <button id="logout-button" class="p-2 bg-red-500 rounded text-white">تسجيل الخروج</button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- بطاقة إدارة المستخدمين -->
-        <div class="bg-sidebar p-4 rounded-lg">
-          <h2 class="text-lg font-bold mb-4">إدارة المستخدمين</h2>
-          <ul>
-            <li class="mb-2">عدد المستخدمين: <span id="user-count">0</span></li>
-            <li class="mb-2">المستخدمين النشطين: <span id="active-users">0</span></li>
-          </ul>
-          <button id="show-users-button" class="w-full p-2 mt-4 bg-accent rounded-lg">عرض المستخدمين</button>
-          <div id="users-list" class="mt-4 hidden">
-            <!-- سيتم ملء قائمة المستخدمين هنا بواسطة JavaScript -->
-          </div>
+    <!-- واجهة الدردشة -->
+    <div class="container" id="chat-container" style="display: none;">
+        <div id="admin-panel" style="display: none;">
+            <!-- لوحة تحكم المشرف -->
+            <h2>لوحة تحكم المشرف <span class="admin-badge">Admin</span></h2>
+            <div style="margin-bottom: 20px;">
+                <button id="manage-users-btn" class="form-button" style="margin-bottom: 10px;">إدارة المستخدمين</button>
+                <button id="manage-chats-btn" class="form-button" style="margin-bottom: 10px;">إدارة الدردشات</button>
+                <button id="cloudinary-btn" class="form-button" style="margin-bottom: 10px;">إدارة الملفات (Cloudinary)</button>
+                <button id="logout-btn" class="form-button" style="background-color: var(--danger);">تسجيل الخروج</button>
+            </div>
+            <div id="admin-content"></div>
         </div>
 
-        <!-- بطاقة إدارة المحادثات -->
-        <div class="bg-sidebar p-4 rounded-lg">
-          <h2 class="text-lg font-bold mb-4">إدارة المحادثات</h2>
-          <ul>
-            <li class="mb-2">عدد المحادثات: <span id="chat-count">0</span></li>
-            <li class="mb-2">الرسائل المرسلة: <span id="message-count">0</span></li>
-          </ul>
-          <button id="show-chats-button" class="w-full p-2 mt-4 bg-accent rounded-lg">عرض المحادثات</button>
-          <div id="chats-list" class="mt-4 hidden">
-            <!-- سيتم ملء قائمة المحادثات هنا بواسطة JavaScript -->
-          </div>
+        <div id="regular-chat">
+            <!-- واجهة الدردشة العادية -->
+            <h2>مرحبًا في LahaChat</h2>
+            <div id="chat-interface">
+                <!-- سيتم إضافة واجهة الدردشة هنا -->
+                <p>هذه هي واجهة الدردشة العادية. سيتم تطويرها أكثر في النسخة النهائية.</p>
+            </div>
         </div>
-
-        <!-- بطاقة الإعدادات -->
-        <div class="bg-sidebar p-4 rounded-lg">
-          <h2 class="text-lg font-bold mb-4">الإعدادات</h2>
-          <ul>
-            <li class="mb-2">تعديل الإعدادات العامة</li>
-            <li class="mb-2">إدارة الصلاحيات</li>
-          </ul>
-          <button class="w-full p-2 mt-4 bg-accent rounded-lg">تعديل الإعدادات</button>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- تضمين Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
-      authDomain: "tlgr-1436a.firebaseapp.com",
-      databaseURL: "https://tlgr-1436a-default-rtdb.firebaseio.com",
-      projectId: "tlgr-1436a",
-      storageBucket: "tlgr-1436a.appspot.com",
-      messagingSenderId: "128259219683",
-      appId: "1:128259219683:web:b59f803204f226a5bda5d6"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-  </script>
-
-  <script type="module" src="script.js"></script>
+    <!-- تضمين ملفات JavaScript -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
