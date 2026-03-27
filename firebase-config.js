@@ -1,4 +1,7 @@
-// firebase-config.js - نسخة محسنة
+// ============================================
+// FIREBASE CONFIGURATION - TELGRAMI
+// ============================================
+
 const firebaseConfig = {
     apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
     authDomain: "tlgr-1436a.firebaseapp.com",
@@ -11,45 +14,66 @@ const firebaseConfig = {
 };
 
 // تهيئة Firebase
-const app = firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+
+// التصدير للاستخدام العالمي
 const auth = firebase.auth();
 const database = firebase.database();
 const storage = firebase.storage();
 
-// Cloudinary للإعلاميات
+// إعدادات Cloudinary
 const CLOUDINARY_CLOUD_NAME = "dnillsbmi";
 const CLOUDINARY_UPLOAD_PRESET = "ekxzvogb";
 
-// إعدادات إضافية
-const APP_SETTINGS = {
-    maxMessageLength: 4096,
-    maxStoryDuration: 24, // ساعات
-    callTimeout: 30000, // مللي ثانية
-    typingTimeout: 3000,
-    lastSeenTimeout: 60000
-};
-
-// دالة لإنشاء معرف فريد
+// دوال مساعدة عامة
 function generateId() {
     return database.ref().push().key;
 }
 
-// دالة لتنسيق الوقت
 function formatTime(timestamp) {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now - date;
     
     if (diff < 60000) return 'الآن';
     if (diff < 3600000) return Math.floor(diff / 60000) + ' د';
-    if (diff < 86400000) return date.getHours() + ':' + date.getMinutes();
-    if (diff < 604800000) return ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][date.getDay()];
+    if (diff < 86400000) return date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+    if (diff < 604800000) {
+        const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        return days[date.getDay()];
+    }
     return date.toLocaleDateString('ar-EG');
 }
 
-// دالة لإظهار الإشعارات
-function showNotification(title, body, icon = null) {
-    if (Notification.permission === 'granted') {
-        new Notification(title, { body, icon });
-    }
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
+
+function getAuthErrorMessage(errorCode) {
+    const errors = {
+        'auth/invalid-email': 'البريد الإلكتروني غير صالح',
+        'auth/user-disabled': 'هذا الحساب معطل',
+        'auth/user-not-found': 'لا يوجد حساب بهذا البريد الإلكتروني',
+        'auth/wrong-password': 'كلمة المرور غير صحيحة',
+        'auth/email-already-in-use': 'هذا البريد الإلكتروني مستخدم بالفعل',
+        'auth/weak-password': 'كلمة المرور ضعيفة جداً',
+        'auth/operation-not-allowed': 'هذه العملية غير مسموحة',
+        'auth/network-request-failed': 'فشل الاتصال بالشبكة'
+    };
+    return errors[errorCode] || 'حدث خطأ غير متوقع';
+}
+
+// تصدير للاستخدام العالمي
+window.auth = auth;
+window.db = database;
+window.storage = storage;
+window.CLOUDINARY_CLOUD_NAME = CLOUDINARY_CLOUD_NAME;
+window.CLOUDINARY_UPLOAD_PRESET = CLOUDINARY_UPLOAD_PRESET;
+window.generateId = generateId;
+window.formatTime = formatTime;
+window.escapeHtml = escapeHtml;
+window.getAuthErrorMessage = getAuthErrorMessage;
