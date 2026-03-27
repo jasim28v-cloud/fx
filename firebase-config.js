@@ -1,9 +1,10 @@
+// استيراد Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 import { getDatabase, ref, set, get, push, onValue, update, remove, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query as fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot, orderBy as fsOrderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-// Firebase Config
+// إعدادات Firebase (بياناتك)
 const firebaseConfig = {
     apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
     authDomain: "tlgr-1436a.firebaseapp.com",
@@ -15,25 +16,41 @@ const firebaseConfig = {
     measurementId: "G-K4W3BBTV0G"
 };
 
+// تهيئة Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+const firestore = getFirestore(app);
+
+// بيانات المدير
+const ADMIN_EMAIL = "jasim28v@gmail.com";
+const ADMIN_CODE = "vv2314vv";
+
 // Cloudinary Config
 const CLOUDINARY_CONFIG = {
     cloudName: "dnillsbmi",
     uploadPreset: "ekxzvogb"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
-const firestore = getFirestore(app);
-
-const ADMIN_EMAIL = "jasim28v@gmail.com";
-const ADMIN_CODE = "vv2314vv";
-
+// تصدير كل ما نحتاجه
 export { 
-    auth, database, firestore,
+    auth, 
+    database, 
+    firestore,
+    // Realtime Database
     ref, set, get, push, onValue, update, remove, query, orderByChild, equalTo,
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile,
+    // Auth
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    updateProfile,
+    // Firestore
     doc, setDoc, getDoc, collection, addDoc, fsQuery, where, getDocs, updateDoc, deleteDoc, onSnapshot, fsOrderBy,
+    // Admin
     ADMIN_EMAIL, ADMIN_CODE,
+    // Cloudinary
     CLOUDINARY_CONFIG
 };
+
+console.log("✅ Firebase initialized successfully");
