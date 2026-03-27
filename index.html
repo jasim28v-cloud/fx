@@ -1,123 +1,214 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>tlgrami — Telegram Web K Clone</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0e1621">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كابل - Telegram Clone</title>
+  <script src="https://cdn.tailwindcss.com/3.4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #0e1621;
+      --sidebar-bg: #17212b;
+      --chat-bg: #0b141a;
+      --accent: #2481cc;
+      --text-primary: #e9e9e9;
+      --text-secondary: #8e9aa0;
+      --message-in: #182533;
+      --message-out: #2b5278;
+    }
+
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .chat-list-item {
+      transition: background-color 0.2s;
+    }
+
+    .chat-list-item:hover {
+      background-color: rgba(36, 129, 204, 0.1);
+    }
+
+    .chat-list-item.active {
+      background-color: rgba(36, 129, 204, 0.2);
+    }
+
+    .message-bubble {
+      border-radius: 18px;
+      padding: 8px 12px;
+      margin: 4px 0;
+      max-width: 70%;
+    }
+
+    .message-in {
+      background-color: var(--message-in);
+      margin-right: auto;
+      margin-left: 10px;
+    }
+
+    .message-out {
+      background-color: var(--message-out);
+      margin-left: auto;
+      margin-right: 10px;
+    }
+
+    .chat-header {
+      backdrop-filter: blur(10px);
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar {
+      backdrop-filter: blur(10px);
+      background-color: var(--sidebar-bg);
+    }
+
+    .chat-wallpaper {
+      background-color: var(--chat-bg);
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%230b141a"/><circle cx="50" cy="50" r="1" fill="%232481cc" opacity="0.1"/></svg>');
+    }
+  </style>
 </head>
-<body class="bg-[#0e1621] text-white font-[Inter] overflow-hidden h-screen">
+<body class="flex h-screen">
+  <!-- قسم تسجيل الدخول -->
+  <div id="auth-section" class="min-h-screen flex items-center justify-center">
+    <div class="auth-card w-[400px] p-6 rounded-lg shadow-lg">
+      <h2 class="text-2xl font-bold mb-6 text-center">تسجيل الدخول</h2>
+      <form id="login-form">
+        <input type="email" name="loginEmail" placeholder="البريد الإلكتروني" class="w-full p-3 mb-4 rounded-lg bg-sidebar text-white" required>
+        <input type="password" name="loginPassword" placeholder="كلمة المرور" class="w-full p-3 mb-6 rounded-lg bg-sidebar text-white" required>
+        <button type="submit" class="w-full p-3 bg-accent rounded-lg font-bold">دخول</button>
+      </form>
+    </div>
+  </div>
 
-    <!-- شاشة تسجيل الدخول -->
-    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0e1621]">
-        <div class="bg-[#17212b] rounded-2xl w-96 p-6 shadow-2xl border border-white/20">
-            <div class="text-center mb-6">
-                <i class="fab fa-telegram text-5xl text-[#2481cc]"></i>
-                <h2 class="text-2xl font-bold mt-2">tlgrami</h2>
-                <p class="text-gray-400 text-sm">سجل دخولك أو أنشئ حسابًا</p>
-            </div>
-            <div class="space-y-4">
-                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" class="w-full bg-[#0e1621] rounded-lg p-3 outline-none focus:ring-1 focus:ring-[#2481cc]">
-                <input type="password" id="loginPassword" placeholder="كلمة المرور" class="w-full bg-[#0e1621] rounded-lg p-3 outline-none focus:ring-1 focus:ring-[#2481cc]">
-                <button id="loginBtn" class="w-full bg-[#2481cc] py-2 rounded-full font-bold hover:bg-[#1a6cb0] transition">تسجيل الدخول</button>
-                <button id="signupBtn" class="w-full bg-transparent border border-white/20 py-2 rounded-full hover:bg-white/5 transition">إنشاء حساب جديد</button>
-            </div>
-            <div id="loginError" class="text-red-400 text-sm text-center mt-4 hidden"></div>
-        </div>
+  <!-- قسم المحادثات -->
+  <div id="chat-section" class="flex flex-1 hidden">
+    <!-- القائمة الجانبية -->
+    <div class="sidebar w-[70px] flex flex-col items-center py-4">
+      <div class="folder-icon p-3 mb-4 rounded-lg text-accent">
+        <i class="fas fa-comment-dots text-xl"></i>
+      </div>
+      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
+        <i class="fas fa-users text-xl"></i>
+      </div>
+      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
+        <i class="fas fa-bookmark text-xl"></i>
+      </div>
+      <div class="folder-icon p-3 mb-4 rounded-lg text-text-secondary">
+        <i class="fas fa-cog text-xl"></i>
+      </div>
     </div>
 
-    <!-- التطبيق الرئيسي -->
-    <div id="appContainer" class="hidden h-full">
-        <div class="flex h-full w-full">
-            <!-- العمود الأول: المجلدات -->
-            <div id="foldersColumn" class="w-[70px] bg-[#17212b] flex flex-col items-center py-4 gap-6 border-r border-white/5">
-                <div class="folder-icon active" data-folder="all"><i class="fas fa-home text-2xl"></i><span class="text-[10px] mt-1">الجميع</span></div>
-                <div class="folder-icon" data-folder="personal"><i class="fas fa-user text-2xl"></i><span class="text-[10px] mt-1">شخصي</span></div>
-                <div class="folder-icon" data-folder="channels"><i class="fas fa-broadcast-tower text-2xl"></i><span class="text-[10px] mt-1">القنوات</span></div>
-                <div class="folder-icon" data-folder="muted"><i class="fas fa-bell-slash text-2xl"></i><span class="text-[10px] mt-1">مكتوم</span></div>
-                <div class="folder-icon admin-folder hidden" data-folder="admin"><i class="fas fa-crown text-2xl text-yellow-500"></i><span class="text-[10px] mt-1">المدير</span></div>
-            </div>
-
-            <!-- العمود الثاني: قائمة المحادثات -->
-            <div id="chatListColumn" class="w-[350px] bg-[#17212b] flex flex-col border-r border-white/5">
-                <div class="p-3 flex items-center gap-3 border-b border-white/10">
-                    <div class="relative flex-1">
-                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" id="searchChats" placeholder="ابحث في المحادثات (regex)..." class="w-full bg-[#242f3e] rounded-full py-2 pr-9 pl-4 text-sm outline-none focus:ring-1 focus:ring-[#2481cc]">
-                    </div>
-                    <button id="newChatBtn" class="bg-[#2481cc] w-9 h-9 rounded-full flex items-center justify-center"><i class="fas fa-plus"></i></button>
-                </div>
-                <div id="chatListContainer" class="flex-1 overflow-y-auto custom-scrollbar"></div>
-            </div>
-
-            <!-- العمود الثالث: نافذة الدردشة -->
-            <div id="chatWindow" class="flex-1 flex flex-col relative bg-[#080d14] bg-chat-pattern">
-                <div id="chatHeader" class="sticky top-0 bg-[#17212b]/90 backdrop-blur-md border-b border-white/10 px-5 py-3 flex items-center justify-between z-10">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-[#2481cc] flex items-center justify-center font-bold text-lg">U</div>
-                        <div>
-                            <h2 id="chatTitle" class="font-semibold text-lg">اختر محادثة</h2>
-                            <p id="chatStatus" class="text-xs text-gray-400">متصل بالإنترنت</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <i class="fas fa-phone-alt text-gray-300 cursor-pointer hover:text-[#2481cc]"></i>
-                        <i class="fas fa-info-circle text-gray-300 cursor-pointer hover:text-[#2481cc]"></i>
-                        <i id="toggleEncryption" class="fas fa-lock text-gray-300 cursor-pointer hover:text-[#2481cc]" title="تشفير المحادثة"></i>
-                    </div>
-                </div>
-                <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar"></div>
-                <button id="scrollToBottomBtn" class="absolute bottom-24 left-6 bg-[#2481cc] rounded-full w-10 h-10 shadow-lg hidden items-center justify-center z-20"><i class="fas fa-arrow-down"></i></button>
-                <div class="bg-[#17212b]/80 backdrop-blur-sm p-3 border-t border-white/10">
-                    <div class="flex items-end gap-2">
-                        <button id="attachMediaBtn" class="text-[#2481cc] text-2xl"><i class="fas fa-paperclip"></i></button>
-                        <button id="voiceNoteBtn" class="text-[#2481cc] text-2xl"><i class="fas fa-microphone"></i></button>
-                        <div class="flex-1 bg-[#242f3e] rounded-2xl px-4 py-2 min-h-[44px] flex items-center">
-                            <textarea id="messageInput" rows="1" placeholder="اكتب رسالة..." class="w-full bg-transparent outline-none resize-none text-white max-h-32"></textarea>
-                        </div>
-                        <button id="sendMessageBtn" class="bg-[#2481cc] rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- قائمة المحادثات -->
+    <div class="chat-list w-[350px] flex flex-col border-r border-gray-700">
+      <div class="search-bar p-3 border-b border-gray-700">
+        <input type="text" placeholder="بحث" class="w-full bg-sidebar text-white rounded-lg px-3 py-2">
+      </div>
+      <div id="chat-list-items" class="chat-list-items flex-1 overflow-y-auto">
+        <!-- سيتم ملء المحادثات هنا بواسطة JavaScript -->
+      </div>
     </div>
 
-    <!-- نماذج إضافية -->
-    <div id="adminModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="bg-[#17212b] rounded-2xl w-[600px] max-h-[80vh] overflow-y-auto p-5 border border-white/20">
-            <div class="flex justify-between items-center border-b border-white/10 pb-2 mb-4"><h2 class="text-xl font-bold">⚡ لوحة التحكم</h2><button id="closeAdminModal" class="text-gray-400"><i class="fas fa-times"></i></button></div>
-            <div class="space-y-5">
-                <div><h3 class="font-semibold text-[#2481cc]">📢 بث رسالة عامة</h3><textarea id="broadcastMsg" rows="2" class="w-full bg-[#0e1621] rounded-lg p-2 mt-1"></textarea><button id="sendBroadcastBtn" class="mt-2 bg-[#2481cc] px-4 py-1 rounded-full text-sm">إرسال للجميع</button></div>
-                <div><h3 class="font-semibold text-[#2481cc]">🖼️ معرض الوسائط</h3><button id="refreshMediaGalleryBtn" class="bg-gray-700 px-3 py-1 rounded-full text-sm">تحديث</button><div id="mediaGalleryList" class="grid grid-cols-3 gap-2 mt-2 max-h-48 overflow-y-auto"></div></div>
-                <div><h3 class="font-semibold text-[#2481cc]">🔨 حظر مستخدم</h3><input id="banUidInput" placeholder="معرف المستخدم (UID)" class="bg-[#0e1621] rounded-lg p-2 w-full"><button id="banUserBtn" class="mt-2 bg-red-600 px-4 py-1 rounded-full text-sm">حظر</button></div>
-                <div><h3 class="font-semibold text-[#2481cc]">📊 المستخدمون المسجلون</h3><div id="adminUserList" class="text-sm space-y-1 max-h-32 overflow-y-auto"></div></div>
-            </div>
+    <!-- نافذة المحادثة -->
+    <div class="chat-window flex-1 flex flex-col bg-chat-wallpaper">
+      <div class="chat-header p-4 flex items-center border-b border-gray-700">
+        <div class="flex items-center flex-1">
+          <img src="https://via.placeholder.com/50" class="w-12 h-12 rounded-full mr-3">
+          <div>
+            <h2 id="chat-username" class="font-bold">اختر محادثة</h2>
+            <p id="chat-status" class="text-sm text-text-secondary"></p>
+          </div>
         </div>
+        <div class="flex items-center">
+          <button class="p-2 mx-1 rounded-full hover:bg-sidebar"><i class="fas fa-search"></i></button>
+          <button class="p-2 mx-1 rounded-full hover:bg-sidebar"><i class="fas fa-ellipsis-v"></i></button>
+        </div>
+      </div>
+
+      <div id="messages-container" class="messages-container flex-1 overflow-y-auto p-4">
+        <!-- سيتم ملء الرسائل هنا بواسطة JavaScript -->
+      </div>
+
+      <div class="message-input-container p-4 border-t border-gray-700 flex">
+        <button class="p-2 text-text-secondary hover:text-accent"><i class="fas fa-paperclip"></i></button>
+        <input id="message-input" type="text" class="message-input flex-1 bg-sidebar text-white rounded-lg px-4 py-2 mx-2" placeholder="اكتب رسالة...">
+        <button id="send-button" class="send-button bg-accent text-white px-4 py-2 rounded-lg"><i class="fas fa-paper-plane"></i></button>
+      </div>
     </div>
+  </div>
 
-    <div id="newChatModal" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center">
-        <div class="bg-[#17212b] rounded-2xl w-[400px] p-5"><h2 class="text-xl font-bold mb-3">محادثة جديدة</h2><input id="searchUserInput" placeholder="البريد الإلكتروني أو اسم المستخدم" class="w-full bg-[#0e1621] rounded-lg p-2"><div id="userSearchResults" class="mt-3 max-h-60 overflow-y-auto"></div><button id="closeNewChatModal" class="mt-4 w-full bg-gray-700 py-2 rounded-full">إلغاء</button></div></div>
+  <!-- قسم لوحة التحكم -->
+  <div id="admin-panel-section" class="flex flex-1 hidden">
+    <div class="w-full p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">لوحة التحكم</h1>
+        <button id="logout-button" class="p-2 bg-red-500 rounded text-white">تسجيل الخروج</button>
+      </div>
 
-    <div id="contextMenu" class="fixed hidden bg-[#1e2a36] rounded-lg shadow-xl border border-white/20 z-[100] w-48 py-1 text-sm"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- بطاقة إدارة المستخدمين -->
+        <div class="bg-sidebar p-4 rounded-lg">
+          <h2 class="text-lg font-bold mb-4">إدارة المستخدمين</h2>
+          <ul>
+            <li class="mb-2">عدد المستخدمين: <span id="user-count">0</span></li>
+            <li class="mb-2">المستخدمين النشطين: <span id="active-users">0</span></li>
+          </ul>
+          <button id="show-users-button" class="w-full p-2 mt-4 bg-accent rounded-lg">عرض المستخدمين</button>
+          <div id="users-list" class="mt-4 hidden">
+            <!-- سيتم ملء قائمة المستخدمين هنا بواسطة JavaScript -->
+          </div>
+        </div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-                "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-                "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
-            }
-        }
-    </script>
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="script.js"></script>
-    <script>
-        if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(console.log); }
-    </script>
+        <!-- بطاقة إدارة المحادثات -->
+        <div class="bg-sidebar p-4 rounded-lg">
+          <h2 class="text-lg font-bold mb-4">إدارة المحادثات</h2>
+          <ul>
+            <li class="mb-2">عدد المحادثات: <span id="chat-count">0</span></li>
+            <li class="mb-2">الرسائل المرسلة: <span id="message-count">0</span></li>
+          </ul>
+          <button id="show-chats-button" class="w-full p-2 mt-4 bg-accent rounded-lg">عرض المحادثات</button>
+          <div id="chats-list" class="mt-4 hidden">
+            <!-- سيتم ملء قائمة المحادثات هنا بواسطة JavaScript -->
+          </div>
+        </div>
+
+        <!-- بطاقة الإعدادات -->
+        <div class="bg-sidebar p-4 rounded-lg">
+          <h2 class="text-lg font-bold mb-4">الإعدادات</h2>
+          <ul>
+            <li class="mb-2">تعديل الإعدادات العامة</li>
+            <li class="mb-2">إدارة الصلاحيات</li>
+          </ul>
+          <button class="w-full p-2 mt-4 bg-accent rounded-lg">تعديل الإعدادات</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- تضمين Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
+      authDomain: "tlgr-1436a.firebaseapp.com",
+      databaseURL: "https://tlgr-1436a-default-rtdb.firebaseio.com",
+      projectId: "tlgr-1436a",
+      storageBucket: "tlgr-1436a.appspot.com",
+      messagingSenderId: "128259219683",
+      appId: "1:128259219683:web:b59f803204f226a5bda5d6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+  </script>
+
+  <script type="module" src="script.js"></script>
 </body>
 </html>
