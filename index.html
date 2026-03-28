@@ -5,19 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <meta name="theme-color" content="#0e1621">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>tlgrami | تجربة تواصل مستقبلية</title>
     
     <!-- Tailwind CSS v3.4+ -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Custom Styles -->
     <style>
         * {
             margin: 0;
@@ -46,7 +44,7 @@
             backdrop-filter: blur(25px);
             border: 1px solid rgba(36, 129, 204, 0.3);
             border-radius: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(36, 129, 204, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         
         .glass-input {
@@ -59,13 +57,13 @@
         .glass-input:focus {
             border-color: #2481cc;
             box-shadow: 0 0 0 3px rgba(36, 129, 204, 0.1);
-            background: rgba(14, 22, 33, 0.8);
+            outline: none;
         }
         
         /* Animated Gradient Border */
         .gradient-border {
             position: relative;
-            background: linear-gradient(135deg, #2481cc, #2b5278, #1e3a5f);
+            background: linear-gradient(135deg, #2481cc, #2b5278);
             padding: 2px;
             border-radius: 32px;
             animation: borderGlow 3s ease-in-out infinite;
@@ -86,16 +84,7 @@
             animation: float 6s ease-in-out infinite;
         }
         
-        /* Pulse Animation */
-        @keyframes pulseGlow {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(36, 129, 204, 0.4);
-            }
-            50% {
-                box-shadow: 0 0 0 20px rgba(36, 129, 204, 0);
-            }
-        }
-        
+        /* Button Styles */
         .btn-primary {
             background: linear-gradient(135deg, #2481cc, #2b5278);
             transition: all 0.3s ease;
@@ -161,7 +150,6 @@
         .message-bubble-me {
             background: linear-gradient(135deg, #2b5278, #1e3a5f);
             border-radius: 24px 24px 8px 24px;
-            position: relative;
             animation: slideInRight 0.3s ease-out;
         }
         
@@ -174,39 +162,23 @@
         }
         
         @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         
         @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         
         /* Typing Dots */
-        .typing-dots {
-            display: inline-flex;
-            gap: 4px;
-            align-items: center;
-        }
-        
         .typing-dots span {
+            display: inline-block;
             width: 6px;
             height: 6px;
             border-radius: 50%;
             background: #2481cc;
+            margin: 0 2px;
             animation: typingWave 1.4s infinite;
         }
         
@@ -214,35 +186,8 @@
         .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
         
         @keyframes typingWave {
-            0%, 60%, 100% {
-                transform: translateY(0);
-                opacity: 0.4;
-            }
-            30% {
-                transform: translateY(-8px);
-                opacity: 1;
-            }
-        }
-        
-        /* Waveform Animation for Voice */
-        .waveform {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            height: 30px;
-        }
-        
-        .waveform-bar {
-            width: 3px;
-            height: 20px;
-            background: #2481cc;
-            border-radius: 3px;
-            animation: wave 1s ease-in-out infinite;
-        }
-        
-        @keyframes wave {
-            0%, 100% { height: 10px; }
-            50% { height: 25px; }
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
         }
         
         /* Chat Item Animation */
@@ -252,22 +197,16 @@
         }
         
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Neon Text Effect */
+        /* Neon Text */
         .neon-text {
-            text-shadow: 0 0 10px rgba(36, 129, 204, 0.5), 0 0 20px rgba(36, 129, 204, 0.3);
+            text-shadow: 0 0 10px rgba(36, 129, 204, 0.5);
         }
         
-        /* Background Particles */
+        /* Particles Background */
         .particles {
             position: fixed;
             top: 0;
@@ -286,48 +225,25 @@
         }
         
         @keyframes floatParticle {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.5;
-            }
-            90% {
-                opacity: 0.5;
-            }
-            100% {
-                transform: translateY(-100vh) rotate(360deg);
-                opacity: 0;
-            }
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
         }
         
         /* Mobile Responsive */
         @media (max-width: 768px) {
-            .glass-card {
-                margin: 16px;
-                border-radius: 28px;
-            }
-            
+            .glass-card { margin: 16px; border-radius: 28px; }
             .chat-list-pane {
                 position: fixed;
-                left: -100%;
-                transition: left 0.3s ease;
+                right: -100%;
+                transition: right 0.3s ease;
                 z-index: 30;
                 width: 85% !important;
             }
-            
-            .chat-list-pane.open {
-                left: 70px;
-            }
-            
-            .folders-pane {
-                width: 60px !important;
-            }
-            
-            .chat-window {
-                width: 100%;
-            }
+            .chat-list-pane.open { right: 70px; }
+            .folders-pane { width: 60px !important; }
+            .chat-window { width: 100%; }
         }
         
         /* Loading Spinner */
@@ -344,36 +260,29 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Success Animation */
-        @keyframes checkmark {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            50% {
-                transform: scale(1.2);
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
+        /* Waveform for Voice */
+        .waveform-bar {
+            display: inline-block;
+            width: 3px;
+            height: 20px;
+            background: #2481cc;
+            margin: 0 2px;
+            animation: wave 1s infinite ease-in-out;
         }
         
-        .checkmark-animation {
-            animation: checkmark 0.5s ease-out;
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 25px; }
         }
     </style>
 </head>
-<body class="relative">
-    <!-- Particles Background -->
+<body>
     <div class="particles" id="particles"></div>
     
-    <!-- Main App Container -->
     <div id="app" class="relative z-10">
         <!-- Auth Container -->
         <div id="authContainer" class="min-h-screen flex items-center justify-center p-4">
             <div class="w-full max-w-md">
-                <!-- Logo & Brand -->
                 <div class="text-center mb-8 float-animation">
                     <div class="gradient-border w-24 h-24 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-[#0e1621]">
                         <i class="fas fa-comment-dots text-5xl text-[#2481cc]"></i>
@@ -384,33 +293,26 @@
                     <p class="text-gray-400 mt-2">تجربة تواصل من عالم آخر</p>
                 </div>
                 
-                <!-- Tabs -->
-                <div class="glass-card p-2 mb-4 flex gap-2">
-                    <button id="loginTab" class="flex-1 py-3 rounded-2xl font-semibold transition-all duration-300 bg-[#2481cc] text-white">
-                        <i class="fas fa-sign-in-alt ml-2"></i>تسجيل الدخول
-                    </button>
-                    <button id="registerTab" class="flex-1 py-3 rounded-2xl font-semibold transition-all duration-300 text-gray-400">
-                        <i class="fas fa-user-plus ml-2"></i>إنشاء حساب
-                    </button>
-                </div>
-                
                 <!-- Login Form -->
                 <div id="loginForm" class="glass-card p-6 space-y-5">
                     <div class="relative">
                         <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
                         <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
+                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
                     </div>
                     <div class="relative">
                         <i class="fas fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
                         <input type="password" id="loginPassword" placeholder="كلمة المرور" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
+                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
                     </div>
                     <button id="loginBtn" class="btn-primary w-full py-3 rounded-2xl text-white font-semibold ripple-effect">
                         <i class="fas fa-arrow-left ml-2"></i>تسجيل الدخول
                     </button>
-                    <div class="text-center text-sm text-gray-500">
-                        <span>المسؤول: jasim28v@gmail.com / vv2314vv</span>
+                    <button id="showRegisterBtn" class="w-full text-[#2481cc] text-sm hover:underline">
+                        ليس لديك حساب؟ إنشاء حساب جديد
+                    </button>
+                    <div class="text-center text-xs text-gray-500">
+                        <span>المسؤول: jasim28v@gmail.com</span>
                     </div>
                 </div>
                 
@@ -419,36 +321,29 @@
                     <div class="relative">
                         <i class="fas fa-user absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
                         <input type="text" id="regName" placeholder="الاسم الكامل" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
+                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
                     </div>
                     <div class="relative">
                         <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
                         <input type="email" id="regEmail" placeholder="البريد الإلكتروني" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
+                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
                     </div>
                     <div class="relative">
                         <i class="fas fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
                         <input type="password" id="regPassword" placeholder="كلمة المرور" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-check-circle absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="password" id="regConfirmPassword" placeholder="تأكيد كلمة المرور" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl outline-none text-white placeholder:text-gray-500">
+                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
                     </div>
                     <button id="registerBtn" class="btn-primary w-full py-3 rounded-2xl text-white font-semibold ripple-effect">
                         <i class="fas fa-user-plus ml-2"></i>إنشاء حساب
                     </button>
-                </div>
-                
-                <!-- Social Login (Optional) -->
-                <div class="text-center mt-6">
-                    <p class="text-gray-500 text-sm">منصة تواصل آمنة ومشفرة</p>
+                    <button id="backToLoginBtn" class="w-full text-[#2481cc] text-sm hover:underline">
+                        لديك حساب؟ تسجيل الدخول
+                    </button>
                 </div>
             </div>
         </div>
         
-        <!-- Main Chat Interface (Hidden initially) -->
+        <!-- Main Chat Interface -->
         <div id="chatInterface" class="hidden h-screen flex overflow-hidden">
             <!-- Folders Pane -->
             <div class="folders-pane w-[70px] bg-[#17212b]/80 backdrop-blur-xl flex flex-col items-center py-5 gap-5 border-l border-white/5 z-20">
@@ -459,10 +354,6 @@
                 <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="personal">
                     <i class="fas fa-user text-2xl"></i>
                     <span class="text-[10px] mt-1">شخصي</span>
-                </div>
-                <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="channels">
-                    <i class="fas fa-broadcast-tower text-2xl"></i>
-                    <span class="text-[10px] mt-1">قنوات</span>
                 </div>
                 <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="groups">
                     <i class="fas fa-users text-2xl"></i>
@@ -492,16 +383,16 @@
                     <div class="relative">
                         <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                         <input type="text" id="searchInput" placeholder="بحث في المحادثات..." 
-                               class="glass-input w-full rounded-full py-2.5 pr-9 pl-4 text-sm outline-none text-white">
+                               class="glass-input w-full rounded-full py-2.5 pr-9 pl-4 text-sm text-white">
                     </div>
                 </div>
                 <div id="chatListContainer" class="flex-1 overflow-y-auto"></div>
             </div>
             
             <!-- Chat Window -->
-            <div class="chat-window flex-1 flex flex-col chat-wallpaper relative">
+            <div class="chat-window flex-1 flex flex-col relative">
                 <!-- Header -->
-                <div id="chatHeader" class="glass-header px-5 py-3 flex items-center justify-between sticky top-0 z-10">
+                <div id="chatHeader" class="px-5 py-3 flex items-center justify-between sticky top-0 z-10 bg-[#17212b]/80 backdrop-blur-xl border-b border-white/10">
                     <div class="flex items-center gap-3">
                         <button id="mobileChatListToggle" class="md:hidden text-white text-xl">
                             <i class="fas fa-chevron-right"></i>
@@ -519,7 +410,7 @@
                 </div>
                 
                 <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2 bg-[#080d14]"></div>
                 
                 <!-- Scroll Button -->
                 <button id="scrollToBottom" class="absolute bottom-24 left-6 bg-[#2481cc] rounded-full p-2 shadow-lg hidden transition-all hover:scale-110">
@@ -549,14 +440,14 @@
     <div id="adminModal" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 hidden">
         <div class="glass-card p-6 w-[500px] max-w-[90%] max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
-                <h2 class="text-xl font-bold"><i class="fas fa-crown text-yellow-500 ml-2"></i>لوحة التحكم السحابية</h2>
+                <h2 class="text-xl font-bold"><i class="fas fa-crown text-yellow-500 ml-2"></i>لوحة التحكم</h2>
                 <button id="closeAdminModal" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
             </div>
             <div class="space-y-5">
                 <div>
-                    <label class="block text-sm mb-2">إعلان عام للجميع</label>
-                    <textarea id="broadcastMsg" rows="3" class="glass-input w-full rounded-lg p-2"></textarea>
-                    <button id="sendBroadcastBtn" class="mt-2 bg-[#2481cc] px-4 py-1.5 rounded-lg text-sm hover:bg-[#2b90e0]">إرسال للجميع</button>
+                    <label class="block text-sm mb-2">إعلان عام</label>
+                    <textarea id="broadcastMsg" rows="3" class="glass-input w-full rounded-lg p-2 text-white"></textarea>
+                    <button id="sendBroadcastBtn" class="mt-2 bg-[#2481cc] px-4 py-1.5 rounded-lg text-sm">إرسال للجميع</button>
                 </div>
                 <div>
                     <label class="block text-sm mb-2">معرض الوسائط</label>
@@ -565,7 +456,7 @@
                 <div>
                     <label class="block text-sm mb-2">حظر مستخدم</label>
                     <div class="flex gap-2">
-                        <input id="banEmail" class="glass-input flex-1 rounded-lg p-2" placeholder="البريد الإلكتروني">
+                        <input id="banEmail" class="glass-input flex-1 rounded-lg p-2 text-white" placeholder="البريد الإلكتروني">
                         <button id="banUserBtn" class="bg-red-600 px-4 rounded-lg hover:bg-red-700">حظر</button>
                     </div>
                 </div>
@@ -574,8 +465,8 @@
         </div>
     </div>
     
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#2481cc] text-white px-6 py-3 rounded-full shadow-lg z-50 hidden transition-all duration-300"></div>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#2481cc] text-white px-6 py-3 rounded-full shadow-lg z-50 hidden"></div>
     
     <script type="importmap">
         {
@@ -587,6 +478,7 @@
         }
     </script>
     
+    <script type="module" src="firebase-config.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
