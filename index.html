@@ -1,484 +1,95 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <meta name="theme-color" content="#0e1621">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>tlgrami | تجربة تواصل مستقبلية</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tlgrami | Telegram Web K</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0e1621; color: #fff; }
+    .bg-sidebar { background-color: #17212b; }
+    .bg-chat { background-color: #0e1621; }
+    .bg-bubble-me { background-color: #2b5278; }
+    .bg-bubble-them { background-color: #182533; }
+    .text-accent { color: #2481cc; }
+    .bg-accent { background-color: #2481cc; }
     
-    <!-- Tailwind CSS v3.4+ -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    .bubble-tail { position: absolute; bottom: 0; width: 10px; height: 10px; }
+    .bubble-tail-me { left: -8px; fill: #2b5278; transform: scaleX(-1); }
+    .bubble-tail-them { right: -8px; fill: #182533; transform: scaleX(-1); }
     
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0a0f1a 0%, #0e1621 100%);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-        
-        /* Glassmorphism Ultra Modern */
-        .glass-modern {
-            background: rgba(23, 33, 43, 0.65);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(36, 129, 204, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        
-        .glass-card {
-            background: rgba(23, 33, 43, 0.75);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(36, 129, 204, 0.3);
-            border-radius: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        
-        .glass-input {
-            background: rgba(14, 22, 33, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(36, 129, 204, 0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .glass-input:focus {
-            border-color: #2481cc;
-            box-shadow: 0 0 0 3px rgba(36, 129, 204, 0.1);
-            outline: none;
-        }
-        
-        /* Animated Gradient Border */
-        .gradient-border {
-            position: relative;
-            background: linear-gradient(135deg, #2481cc, #2b5278);
-            padding: 2px;
-            border-radius: 32px;
-            animation: borderGlow 3s ease-in-out infinite;
-        }
-        
-        @keyframes borderGlow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-        
-        /* Floating Animation */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .float-animation {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        /* Button Styles */
-        .btn-primary {
-            background: linear-gradient(135deg, #2481cc, #2b5278);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(36, 129, 204, 0.3);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-        
-        /* Ripple Effect */
-        .ripple-effect {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .ripple-effect:after {
-            content: "";
-            display: block;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            background-image: radial-gradient(circle, #fff 10%, transparent 10%);
-            background-repeat: no-repeat;
-            background-position: 50%;
-            transform: scale(10);
-            opacity: 0;
-            transition: transform 0.5s, opacity 0.8s;
-        }
-        
-        .ripple-effect:active:after {
-            transform: scale(0);
-            opacity: 0.3;
-            transition: 0s;
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(23, 33, 43, 0.5);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #2481cc, #2b5278);
-            border-radius: 10px;
-        }
-        
-        /* Message Bubbles */
-        .message-bubble-me {
-            background: linear-gradient(135deg, #2b5278, #1e3a5f);
-            border-radius: 24px 24px 8px 24px;
-            animation: slideInRight 0.3s ease-out;
-        }
-        
-        .message-bubble-them {
-            background: rgba(24, 37, 51, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(36, 129, 204, 0.2);
-            border-radius: 24px 24px 24px 8px;
-            animation: slideInLeft 0.3s ease-out;
-        }
-        
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes slideInLeft {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        /* Typing Dots */
-        .typing-dots span {
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #2481cc;
-            margin: 0 2px;
-            animation: typingWave 1.4s infinite;
-        }
-        
-        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-        
-        @keyframes typingWave {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-8px); opacity: 1; }
-        }
-        
-        /* Chat Item Animation */
-        .chat-item {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.4s ease-out;
-        }
-        
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Neon Text */
-        .neon-text {
-            text-shadow: 0 0 10px rgba(36, 129, 204, 0.5);
-        }
-        
-        /* Particles Background */
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        .particle {
-            position: absolute;
-            background: rgba(36, 129, 204, 0.3);
-            border-radius: 50%;
-            animation: floatParticle 20s infinite linear;
-        }
-        
-        @keyframes floatParticle {
-            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.5; }
-            90% { opacity: 0.5; }
-            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
-        }
-        
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .glass-card { margin: 16px; border-radius: 28px; }
-            .chat-list-pane {
-                position: fixed;
-                right: -100%;
-                transition: right 0.3s ease;
-                z-index: 30;
-                width: 85% !important;
-            }
-            .chat-list-pane.open { right: 70px; }
-            .folders-pane { width: 60px !important; }
-            .chat-window { width: 100%; }
-        }
-        
-        /* Loading Spinner */
-        .spinner-modern {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(36, 129, 204, 0.2);
-            border-top-color: #2481cc;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Waveform for Voice */
-        .waveform-bar {
-            display: inline-block;
-            width: 3px;
-            height: 20px;
-            background: #2481cc;
-            margin: 0 2px;
-            animation: wave 1s infinite ease-in-out;
-        }
-        
-        @keyframes wave {
-            0%, 100% { height: 10px; }
-            50% { height: 25px; }
-        }
-    </style>
+    @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    .typing-dot { animation: typing 1s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #2b5278; border-radius: 10px; }
+  </style>
 </head>
-<body>
-    <div class="particles" id="particles"></div>
-    
-    <div id="app" class="relative z-10">
-        <!-- Auth Container -->
-        <div id="authContainer" class="min-h-screen flex items-center justify-center p-4">
-            <div class="w-full max-w-md">
-                <div class="text-center mb-8 float-animation">
-                    <div class="gradient-border w-24 h-24 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-[#0e1621]">
-                        <i class="fas fa-comment-dots text-5xl text-[#2481cc]"></i>
-                    </div>
-                    <h1 class="text-4xl font-bold neon-text bg-gradient-to-r from-[#2481cc] to-[#2b5278] bg-clip-text text-transparent">
-                        tlgrami
-                    </h1>
-                    <p class="text-gray-400 mt-2">تجربة تواصل من عالم آخر</p>
-                </div>
-                
-                <!-- Login Form -->
-                <div id="loginForm" class="glass-card p-6 space-y-5">
-                    <div class="relative">
-                        <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="password" id="loginPassword" placeholder="كلمة المرور" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
-                    </div>
-                    <button id="loginBtn" class="btn-primary w-full py-3 rounded-2xl text-white font-semibold ripple-effect">
-                        <i class="fas fa-arrow-left ml-2"></i>تسجيل الدخول
-                    </button>
-                    <button id="showRegisterBtn" class="w-full text-[#2481cc] text-sm hover:underline">
-                        ليس لديك حساب؟ إنشاء حساب جديد
-                    </button>
-                    <div class="text-center text-xs text-gray-500">
-                        <span>المسؤول: jasim28v@gmail.com</span>
-                    </div>
-                </div>
-                
-                <!-- Register Form -->
-                <div id="registerForm" class="glass-card p-6 space-y-5 hidden">
-                    <div class="relative">
-                        <i class="fas fa-user absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="text" id="regName" placeholder="الاسم الكامل" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="email" id="regEmail" placeholder="البريد الإلكتروني" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-[#2481cc]"></i>
-                        <input type="password" id="regPassword" placeholder="كلمة المرور" 
-                               class="glass-input w-full py-3 pr-12 pl-4 rounded-2xl text-white placeholder:text-gray-500">
-                    </div>
-                    <button id="registerBtn" class="btn-primary w-full py-3 rounded-2xl text-white font-semibold ripple-effect">
-                        <i class="fas fa-user-plus ml-2"></i>إنشاء حساب
-                    </button>
-                    <button id="backToLoginBtn" class="w-full text-[#2481cc] text-sm hover:underline">
-                        لديك حساب؟ تسجيل الدخول
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Main Chat Interface -->
-        <div id="chatInterface" class="hidden h-screen flex overflow-hidden">
-            <!-- Folders Pane -->
-            <div class="folders-pane w-[70px] bg-[#17212b]/80 backdrop-blur-xl flex flex-col items-center py-5 gap-5 border-l border-white/5 z-20">
-                <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="all">
-                    <i class="fas fa-comment text-2xl"></i>
-                    <span class="text-[10px] mt-1">الكل</span>
-                </div>
-                <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="personal">
-                    <i class="fas fa-user text-2xl"></i>
-                    <span class="text-[10px] mt-1">شخصي</span>
-                </div>
-                <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" data-folder="groups">
-                    <i class="fas fa-users text-2xl"></i>
-                    <span class="text-[10px] mt-1">مجموعات</span>
-                </div>
-                <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400 rounded-xl" id="adminFolderBtn">
-                    <i class="fas fa-shield-alt text-2xl"></i>
-                    <span class="text-[10px] mt-1">مدير</span>
-                </div>
-                <div class="mt-auto">
-                    <div id="logoutBtn" class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-red-400 rounded-xl">
-                        <i class="fas fa-sign-out-alt text-2xl"></i>
-                        <span class="text-[10px] mt-1">خروج</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Chat List Pane -->
-            <div class="chat-list-pane w-[350px] bg-[#17212b]/80 backdrop-blur-xl flex flex-col border-l border-white/5">
-                <div class="p-4 border-b border-white/10">
-                    <div class="flex justify-between items-center mb-3">
-                        <h2 class="text-xl font-semibold">المحادثات</h2>
-                        <button id="menuToggle" class="md:hidden text-[#2481cc] text-2xl">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                    </div>
-                    <div class="relative">
-                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" id="searchInput" placeholder="بحث في المحادثات..." 
-                               class="glass-input w-full rounded-full py-2.5 pr-9 pl-4 text-sm text-white">
-                    </div>
-                </div>
-                <div id="chatListContainer" class="flex-1 overflow-y-auto"></div>
-            </div>
-            
-            <!-- Chat Window -->
-            <div class="chat-window flex-1 flex flex-col relative">
-                <!-- Header -->
-                <div id="chatHeader" class="px-5 py-3 flex items-center justify-between sticky top-0 z-10 bg-[#17212b]/80 backdrop-blur-xl border-b border-white/10">
-                    <div class="flex items-center gap-3">
-                        <button id="mobileChatListToggle" class="md:hidden text-white text-xl">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        <div id="chatAvatar" class="w-12 h-12 rounded-full bg-gradient-to-r from-[#2481cc] to-[#2b5278] flex items-center justify-center text-white text-xl font-bold">?</div>
-                        <div>
-                            <h3 id="chatName" class="font-semibold text-base">اختر محادثة</h3>
-                            <p id="chatStatus" class="text-xs text-gray-400">آخر ظهور مؤخراً</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <i class="fas fa-phone-alt cursor-pointer hover:text-[#2481cc] transition-colors p-2"></i>
-                        <i class="fas fa-video cursor-pointer hover:text-[#2481cc] transition-colors p-2"></i>
-                    </div>
-                </div>
-                
-                <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2 bg-[#080d14]"></div>
-                
-                <!-- Scroll Button -->
-                <button id="scrollToBottom" class="absolute bottom-24 left-6 bg-[#2481cc] rounded-full p-2 shadow-lg hidden transition-all hover:scale-110">
-                    <i class="fas fa-chevron-down text-white"></i>
-                </button>
-                
-                <!-- Input Area -->
-                <div class="p-3 bg-[#17212b]/80 backdrop-blur-xl border-t border-white/10">
-                    <div class="flex items-center gap-2 glass-input rounded-full px-4 py-2">
-                        <label for="fileInput" class="cursor-pointer hover:text-[#2481cc] transition-colors">
-                            <i class="fas fa-paperclip text-gray-400 text-xl"></i>
-                        </label>
-                        <input type="file" id="fileInput" accept="image/*,video/*" class="hidden">
-                        <input type="text" id="messageInput" placeholder="اكتب رسالة..." 
-                               class="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400">
-                        <button id="sendBtn" class="bg-gradient-to-r from-[#2481cc] to-[#2b5278] rounded-full p-2 w-9 h-9 flex items-center justify-center hover:scale-110 transition-transform">
-                            <i class="fas fa-paper-plane text-white text-sm"></i>
-                        </button>
-                    </div>
-                    <div id="uploadProgress" class="hidden mt-2"></div>
-                </div>
-            </div>
-        </div>
+<body class="h-screen flex overflow-hidden">
+
+  <!-- Pane 1: Navigation (70px) -->
+  <nav class="w-[70px] bg-sidebar border-l border-[#0e1621] flex flex-col items-center py-4 gap-6">
+    <div class="w-12 h-12 bg-accent rounded-full flex items-center justify-center cursor-pointer shadow-lg">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
     </div>
-    
-    <!-- Admin Modal -->
-    <div id="adminModal" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 hidden">
-        <div class="glass-card p-6 w-[500px] max-w-[90%] max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
-                <h2 class="text-xl font-bold"><i class="fas fa-crown text-yellow-500 ml-2"></i>لوحة التحكم</h2>
-                <button id="closeAdminModal" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            <div class="space-y-5">
-                <div>
-                    <label class="block text-sm mb-2">إعلان عام</label>
-                    <textarea id="broadcastMsg" rows="3" class="glass-input w-full rounded-lg p-2 text-white"></textarea>
-                    <button id="sendBroadcastBtn" class="mt-2 bg-[#2481cc] px-4 py-1.5 rounded-lg text-sm">إرسال للجميع</button>
-                </div>
-                <div>
-                    <label class="block text-sm mb-2">معرض الوسائط</label>
-                    <div id="mediaGallery" class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto"></div>
-                </div>
-                <div>
-                    <label class="block text-sm mb-2">حظر مستخدم</label>
-                    <div class="flex gap-2">
-                        <input id="banEmail" class="glass-input flex-1 rounded-lg p-2 text-white" placeholder="البريد الإلكتروني">
-                        <button id="banUserBtn" class="bg-red-600 px-4 rounded-lg hover:bg-red-700">حظر</button>
-                    </div>
-                </div>
-                <div id="bannedList" class="text-xs text-red-400"></div>
-            </div>
-        </div>
+    <div id="login-btn" class="mt-auto mb-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
     </div>
-    
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#2481cc] text-white px-6 py-3 rounded-full shadow-lg z-50 hidden"></div>
-    
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-                "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js",
-                "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"
-            }
-        }
-    </script>
-    
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="script.js"></script>
+  </nav>
+
+  <!-- Pane 2: Discovery (350px) -->
+  <aside class="w-[350px] bg-sidebar border-l border-[#0e1621] flex flex-col">
+    <div class="p-4">
+      <input type="text" placeholder="بحث" class="w-full bg-chat border-none rounded-xl py-2 px-4 text-sm outline-none">
+    </div>
+    <div id="chat-list" class="flex-1 overflow-y-auto">
+      <div class="flex items-center gap-3 p-3 bg-accent cursor-pointer">
+        <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-bold">G</div>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-medium truncate">المحادثة العامة</h3>
+          <p class="text-sm text-white/70 truncate">مرحباً بك في tlgrami!</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Pane 3: Conversation (Fluid) -->
+  <main class="flex-1 flex flex-col bg-chat relative">
+    <header class="h-16 bg-sidebar border-b border-[#0e1621] flex items-center px-6 justify-between z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold">G</div>
+        <div>
+          <h2 class="font-bold text-[15px]">المحادثة العامة</h2>
+          <p id="typing-status" class="text-xs text-accent hidden">يكتب الآن<span class="typing-dot">.</span><span class="typing-dot">.</span><span class="typing-dot">.</span></p>
+        </div>
+      </div>
+      <div id="admin-controls" class="hidden flex gap-2">
+        <button id="nuke-btn" class="bg-red-500/20 text-red-500 text-[10px] font-bold px-3 py-1 rounded-full border border-red-500/50">حذف الكل</button>
+        <button id="broadcast-btn" class="bg-accent/20 text-accent text-[10px] font-bold px-3 py-1 rounded-full border border-accent/50">بث رسالة</button>
+      </div>
+    </header>
+
+    <div id="messages-container" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4"></div>
+
+    <footer class="p-4 bg-chat">
+      <div class="max-w-4xl mx-auto flex items-end gap-3">
+        <div class="flex-1 bg-sidebar rounded-2xl p-2 flex items-end gap-2 border border-[#0e1621]">
+          <label class="p-2 cursor-pointer hover:text-accent">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+            <input type="file" id="media-input" class="hidden" accept="image/*,video/*">
+          </label>
+          <textarea id="msg-input" placeholder="رسالة" class="flex-1 bg-transparent border-none outline-none py-2 text-sm resize-none" rows="1"></textarea>
+        </div>
+        <button id="send-btn" class="w-12 h-12 bg-accent rounded-full flex items-center justify-center shadow-lg">
+          <svg class="w-6 h-6 text-white rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <script type="module" src="script.js"></script>
 </body>
 </html>
