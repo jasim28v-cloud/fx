@@ -2,131 +2,437 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connecto - تواصل مع العالم</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0e1621">
+    <meta name="description" content="tlgrami - Telegram Web K Clone with Real-time Messaging">
+    <title>tlgrami | Telegram Clone</title>
+    
+    <!-- Tailwind CSS & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
     <style>
-        body { background-color: #f8f9fa; font-family: 'Tahoma', sans-serif; }
-        .chat-container { height: 60vh; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: white; }
-        .message-sent { background: #0088cc; color: white; padding: 8px 12px; border-radius: 10px; margin: 5px; text-align: right; max-width: 70%; }
-        .message-received { background: #e5e5ea; color: black; padding: 8px 12px; border-radius: 10px; margin: 5px; text-align: left; max-width: 70%; }
-        .login-form { max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .stories-bar { display: flex; overflow-x: auto; padding: 10px; background: white; border-radius: 10px; margin-bottom: 20px; }
-        .story { min-width: 80px; margin: 0 5px; text-align: center; }
-        .story img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #0088cc; }
-        .call-btn { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 5px; }
-        .voice-message { background: #dc3545; color: white; padding: 8px 12px; border-radius: 10px; margin: 5px; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 100%; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            background: #0e1621;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #17212b;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #2481cc;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2b90e0;
+        }
+        
+        /* Glassmorphism Effects */
+        .glass-header {
+            background: rgba(23, 33, 43, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .glass-input {
+            background: rgba(36, 47, 61, 0.9);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Message Bubbles with SVG Tails */
+        .bubble-me {
+            background: #2b5278;
+            border-radius: 18px 18px 4px 18px;
+            position: relative;
+        }
+        
+        .bubble-them {
+            background: #182533;
+            border-radius: 18px 18px 18px 4px;
+            position: relative;
+        }
+        
+        .bubble-me::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: -8px;
+            width: 12px;
+            height: 12px;
+            background: #2b5278;
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+        }
+        
+        .bubble-them::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -8px;
+            width: 12px;
+            height: 12px;
+            background: #182533;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+        
+        /* Typing Animation */
+        .typing-dots span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #2481cc;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+        
+        /* Message Animation */
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message-animate {
+            animation: messageSlideIn 0.3s ease-out;
+        }
+        
+        /* Ripple Effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple:after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10);
+            opacity: 0;
+            transition: transform 0.5s, opacity 0.8s;
+        }
+        
+        .ripple:active:after {
+            transform: scale(0);
+            opacity: 0.3;
+            transition: 0s;
+        }
+        
+        /* Folder Icons */
+        .folder-icon {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .folder-icon.active {
+            color: #2481cc;
+            background: rgba(36, 129, 204, 0.1);
+            border-radius: 12px;
+        }
+        
+        .folder-icon:hover:not(.active) {
+            color: #2481cc;
+            background: rgba(36, 129, 204, 0.05);
+            border-radius: 12px;
+        }
+        
+        /* Chat Items */
+        .chat-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .chat-item:hover {
+            background: #242f3d;
+        }
+        
+        .chat-item.active {
+            background: #2b5278;
+        }
+        
+        /* Voice Waveform Animation */
+        .waveform-bar {
+            display: inline-block;
+            width: 3px;
+            height: 20px;
+            background: #2481cc;
+            margin: 0 2px;
+            animation: wave 1s infinite ease-in-out;
+        }
+        
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 25px; }
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(36, 129, 204, 0.3);
+            border-top: 3px solid #2481cc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        
+        /* Image Preview */
+        .image-preview {
+            transition: transform 0.2s ease;
+        }
+        
+        .image-preview:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Circular Video */
+        .circular-video {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        /* Context Menu */
+        .context-menu {
+            background: #1e2a36;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-width: 180px;
+            z-index: 1000;
+        }
+        
+        .context-menu-item {
+            padding: 8px 16px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .context-menu-item:hover {
+            background: #2481cc;
+        }
+        
+        /* Badge Pulse */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .badge-pulse {
+            animation: pulse 0.5s ease-out;
+        }
+        
+        /* Wallpaper Pattern */
+        .chat-wallpaper {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%232481cc' fill-opacity='0.05' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+            background-color: #080d14;
+        }
+        
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .chat-container { height: 50vh; }
+            .folders-pane { width: 60px; }
+            .chat-list-pane { width: 280px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- شاشة تسجيل الدخول -->
-        <div id="loginScreen" class="login-form">
-            <h3 class="text-center mb-4">Connecto</h3>
-            <p class="text-center mb-4">تواصل مع العالم</p>
-            <div class="mb-3">
-                <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" required>
+    <div id="app" class="flex h-screen w-full overflow-hidden">
+        <!-- Left Navigation Pane (70px) -->
+        <div class="folders-pane w-[70px] bg-[#17212b] flex flex-col items-center py-5 gap-5 border-l border-white/5 z-20">
+            <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400" data-folder="all">
+                <i class="fas fa-comment text-2xl"></i>
+                <span class="text-[10px] mt-1">الكل</span>
             </div>
-            <div class="mb-3">
-                <input type="password" id="loginPassword" class="form-control" placeholder="كلمة المرور" required>
+            <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400" data-folder="personal">
+                <i class="fas fa-user text-2xl"></i>
+                <span class="text-[10px] mt-1">شخصي</span>
             </div>
-            <button id="loginBtn" class="btn btn-primary w-100">دخول</button>
-            <p class="text-center mt-3">ليس لديك حساب؟ <a href="#" id="showRegister">سجل الآن</a></p>
+            <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400" data-folder="channels">
+                <i class="fas fa-broadcast-tower text-2xl"></i>
+                <span class="text-[10px] mt-1">قنوات</span>
+            </div>
+            <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400" data-folder="groups">
+                <i class="fas fa-users text-2xl"></i>
+                <span class="text-[10px] mt-1">مجموعات</span>
+            </div>
+            <div class="folder-icon w-full flex flex-col items-center justify-center py-2 cursor-pointer transition-all text-gray-400" id="adminFolderBtn">
+                <i class="fas fa-shield-alt text-2xl"></i>
+                <span class="text-[10px] mt-1">مدير</span>
+            </div>
         </div>
-
-        <!-- شاشة التسجيل -->
-        <div id="registerScreen" class="login-form" style="display: none;">
-            <h3 class="text-center mb-4">إنشاء حساب</h3>
-            <div class="mb-3">
-                <input type="text" id="registerName" class="form-control" placeholder="اسم المستخدم" required>
-            </div>
-            <div class="mb-3">
-                <input type="email" id="registerEmail" class="form-control" placeholder="البريد الإلكتروني" required>
-            </div>
-            <div class="mb-3">
-                <input type="password" id="registerPassword" class="form-control" placeholder="كلمة المرور" required>
-            </div>
-            <button id="registerBtn" class="btn btn-success w-100">سجل الآن</button>
-            <p class="text-center mt-3">لديك حساب بالفعل؟ <a href="#" id="showLogin">سجل دخول</a></p>
-        </div>
-
-        <!-- شاشة الدردشة -->
-        <div id="chatScreen" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4>مرحباً، <span id="userName"></span>!</h4>
-                <button id="logoutBtn" class="btn btn-danger">خروج</button>
-            </div>
-
-            <!-- شريط القصص -->
-            <div class="stories-bar">
-                <div class="story" id="addStory">
-                    <img src="https://via.placeholder.com/60" alt="إضافة قصة">
-                    <p>إضافة</p>
+        
+        <!-- Chat List Pane (350px) -->
+        <div class="chat-list-pane w-[350px] bg-[#17212b] flex flex-col border-l border-white/5">
+            <div class="p-4 border-b border-white/10">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-semibold">المحادثات</h2>
+                    <button id="newChatBtn" class="text-[#2481cc] hover:bg-[#2481cc]/10 p-2 rounded-full transition-all">
+                        <i class="fas fa-edit text-xl"></i>
+                    </button>
                 </div>
-                <div id="storiesList"></div>
+                <div class="relative">
+                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="searchInput" placeholder="بحث في المحادثات..." class="w-full bg-[#242f3d] rounded-full py-2.5 pr-9 pl-4 text-sm focus:outline-none focus:ring-1 focus:ring-[#2481cc] transition-all">
+                </div>
             </div>
-
-            <!-- نافذة الدردشة -->
-            <div class="chat-container mb-3" id="chatMessages"></div>
-
-            <!-- أدوات الدردشة -->
-            <div class="input-group">
-                <input type="text" id="messageInput" class="form-control" placeholder="اكتب رسالتك...">
-                <button id="sendMessageBtn" class="btn btn-primary">إرسال</button>
-                <button id="recordVoiceBtn" class="btn btn-danger">🎤</button>
-                <input type="file" id="fileInput" style="display: none;">
-                <button id="attachFileBtn" class="btn btn-secondary">مرفق</button>
-                <button id="callBtn" class="btn call-btn">مكالمة صوتية</button>
-                <button id="videoCallBtn" class="btn call-btn">مكالمة مرئية</button>
+            <div id="chatListContainer" class="flex-1 overflow-y-auto"></div>
+        </div>
+        
+        <!-- Chat Window Pane -->
+        <div class="chat-window flex-1 flex flex-col chat-wallpaper relative">
+            <!-- Chat Header -->
+            <div id="chatHeader" class="glass-header px-5 py-3 flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <div id="chatAvatar" class="w-12 h-12 rounded-full bg-[#2481cc] flex items-center justify-center text-white text-xl font-bold">?</div>
+                    <div>
+                        <h3 id="chatName" class="font-semibold text-base">اختر محادثة</h3>
+                        <p id="chatStatus" class="text-xs text-gray-400">آخر ظهور مؤخراً</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <i class="fas fa-phone-alt cursor-pointer hover:text-[#2481cc] transition-colors p-2"></i>
+                    <i class="fas fa-video cursor-pointer hover:text-[#2481cc] transition-colors p-2"></i>
+                    <i class="fas fa-ellipsis-h cursor-pointer hover:text-[#2481cc] transition-colors p-2"></i>
+                </div>
+            </div>
+            
+            <!-- Messages Area -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+            
+            <!-- Scroll to Bottom Button -->
+            <button id="scrollToBottom" class="absolute bottom-24 left-6 bg-[#2481cc] rounded-full p-2 shadow-lg hidden transition-all hover:scale-110">
+                <i class="fas fa-chevron-down text-white"></i>
+            </button>
+            
+            <!-- Input Area -->
+            <div class="p-3 bg-[#17212b]/90 backdrop-blur-sm border-t border-white/10">
+                <div class="flex items-center gap-2 bg-[#242f3d] rounded-full px-4 py-2">
+                    <label for="fileInput" class="cursor-pointer hover:text-[#2481cc] transition-colors">
+                        <i class="fas fa-paperclip text-gray-400 text-xl"></i>
+                    </label>
+                    <input type="file" id="fileInput" accept="image/*,video/*,audio/*" class="hidden">
+                    <input type="text" id="messageInput" placeholder="اكتب رسالة..." class="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400">
+                    <button id="sendBtn" class="bg-[#2481cc] rounded-full p-2 w-9 h-9 flex items-center justify-center hover:bg-[#2b90e0] transition-colors">
+                        <i class="fas fa-paper-plane text-white text-sm"></i>
+                    </button>
+                </div>
+                <div id="uploadProgress" class="hidden mt-2"></div>
             </div>
         </div>
     </div>
-
-    <!-- نافذة تسجيل الصوت -->
-    <div id="voiceModal" class="modal">
-        <div class="modal-content">
-            <h4>تسجيل صوت</h4>
-            <button id="startRecording" class="btn btn-danger">ابدأ التسجيل</button>
-            <button id="stopRecording" class="btn btn-secondary" disabled>وقف التسجيل</button>
-            <button id="cancelRecording" class="btn btn-secondary">إلغاء</button>
-            <audio id="voicePreview" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
-        </div>
-    </div>
-
-    <!-- نافذة المكالمات -->
-    <div id="callModal" class="modal">
-        <div class="modal-content">
-            <h4 id="callModalTitle">مكالمة...</h4>
-            <video id="localVideo" autoplay muted style="width: 200px; border-radius: 10px;"></video>
-            <video id="remoteVideo" autoplay style="width: 200px; border-radius: 10px;"></video>
-            <div>
-                <button id="endCallBtn" class="btn btn-danger">إنهاء المكالمة</button>
+    
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="bg-[#17212b] rounded-2xl p-8 w-96 border border-white/20 shadow-2xl">
+            <div class="text-center mb-6">
+                <i class="fas fa-comment-dots text-5xl text-[#2481cc] mb-3"></i>
+                <h2 class="text-2xl font-bold">tlgrami</h2>
+                <p class="text-gray-400 text-sm mt-2">سجل دخولك للمتابعة</p>
+            </div>
+            <div class="space-y-4">
+                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" class="w-full bg-[#0e1621] rounded-lg p-3 outline-none focus:ring-1 focus:ring-[#2481cc]">
+                <input type="password" id="loginPassword" placeholder="كلمة المرور" class="w-full bg-[#0e1621] rounded-lg p-3 outline-none focus:ring-1 focus:ring-[#2481cc]">
+                <button id="loginBtn" class="w-full bg-[#2481cc] rounded-lg p-2 font-semibold hover:bg-[#2b90e0] transition-colors">تسجيل الدخول</button>
+                <button id="showRegisterBtn" class="w-full text-[#2481cc] text-sm hover:underline">إنشاء حساب جديد</button>
+            </div>
+            <div class="text-center text-xs text-gray-500 mt-4">
+                <p>المسؤول: jasim28v@gmail.com / vv2314vv</p>
             </div>
         </div>
     </div>
-
-    <!-- نافذة مشاهدة القصة -->
-    <div id="storyModal" class="modal">
-        <div class="modal-content" style="background: black; padding: 0;">
-            <img id="storyImage" src="" style="width: 100%;">
-            <div style="position: absolute; bottom: 10px; left: 10px; color: white;">
-                <p id="storyUserName"></p>
+    
+    <!-- Admin Modal -->
+    <div id="adminModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="bg-[#17212b] rounded-2xl p-6 w-[600px] max-w-[90%] max-h-[80vh] overflow-y-auto border border-white/20">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-white/10">
+                <h2 class="text-xl font-bold"><i class="fas fa-crown text-yellow-500 ml-2"></i>لوحة التحكم السحابية</h2>
+                <button id="closeAdminModal" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <button id="closeStoryBtn" class="btn btn-secondary" style="position: absolute; top: 10px; right: 10px;">إغلاق</button>
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm mb-2">إعلان عام للجميع</label>
+                    <textarea id="broadcastMsg" rows="3" class="w-full bg-[#0e1621] rounded-lg p-2 border border-white/10" placeholder="اكتب رسالتك هنا..."></textarea>
+                    <button id="sendBroadcastBtn" class="mt-2 bg-[#2481cc] px-4 py-1.5 rounded-lg text-sm hover:bg-[#2b90e0]">إرسال للجميع</button>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">معرض الوسائط (آخر 15 ملف)</label>
+                    <div id="mediaGallery" class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto bg-[#0e1621] p-2 rounded-lg"></div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">حظر مستخدم</label>
+                    <div class="flex gap-2">
+                        <input id="banEmail" class="bg-[#0e1621] flex-1 rounded-lg p-2" placeholder="البريد الإلكتروني للمستخدم">
+                        <button id="banUserBtn" class="bg-red-600 px-4 rounded-lg hover:bg-red-700">حظر</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">المستخدمون المحظورون</label>
+                    <div id="bannedList" class="text-xs text-red-400 break-all bg-[#0e1621] p-2 rounded"></div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">محو محادثة (أدخل ID المحادثة)</label>
+                    <div class="flex gap-2">
+                        <input id="nukeChatId" class="bg-[#0e1621] flex-1 rounded-lg p-2" placeholder="Chat ID">
+                        <button id="nukeChatBtn" class="bg-orange-600 px-4 rounded-lg hover:bg-orange-700">محو الكل</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
+    
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu fixed hidden"></div>
+    
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
