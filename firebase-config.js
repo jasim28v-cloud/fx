@@ -1,28 +1,26 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, remove, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-
 const firebaseConfig = {
-  apiKey: "AIzaSyAQEHv1K69ZtA48l1TpqUfAIJlmM20gZyA",
-  databaseURL: "https://tlgr-1436a-default-rtdb.firebaseio.com",
-  authDomain: "tlgr-1436a.firebaseapp.com",
-  projectId: "tlgr-1436a"
+    apiKey: "AIzaSyA0i1EPCS5ZEZA_u7weqYhPL6cqExuj_eU",
+    authDomain: "toke-800a7.firebaseapp.com",
+    databaseURL: "https://toke-800a7-default-rtdb.firebaseio.com",
+    projectId: "toke-800a7",
+    storageBucket: "toke-800a7.firebasestorage.app",
+    messagingSenderId: "332051016484",
+    appId: "1:332051016484:web:f6b71128c6013d991b21b1",
+    measurementId: "G-HZZ98K6HB6"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+firebase.initializeApp(firebaseConfig);
 
-// مراقب حالة تسجيل الدخول للمسؤول jasim28v
-onAuthStateChanged(auth, (user) => {
-  if (user && user.email === 'jasim28v@gmail.com') {
-    console.log("Admin session initialized for jasim28v");
-  }
-});
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
 
-export { 
-  app, db, auth, provider, 
-  signInWithPopup, onAuthStateChanged, signOut,
-  ref, push, onChildAdded, remove, set, onValue 
-};
+const CLOUD_NAME = 'daemk3hut';
+const UPLOAD_PRESET = 'fok2_k';
+
+const AGORA_APP_ID_CALL = '4017f66ea15f4ce088e8d8993a072a5b';
+
+const ADMIN_EMAIL = 'jasim300v@gmail.com';
+const ADMIN_PASSWORD = 'xx2314xx';
+
+console.log('✅ TOKE - Firebase, Cloudinary & Agora Ready');
