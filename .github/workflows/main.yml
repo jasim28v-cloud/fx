@@ -1,37 +1,51 @@
-name: نشر فيتا على GitHub Pages
+import os
 
+def create_project():
+    # إنشاء المجلد الرئيسي
+    base = "VitaProject"
+    os.makedirs(base, exist_ok=True)
+    
+    # المجلدات الفرعية
+    os.makedirs(f"{base}/assets", exist_ok=True)
+    os.makedirs(f"{base}/.github/workflows", exist_ok=True)
+    
+    # كتابة الملفات
+    with open(f"{base}/index.html", "w", encoding="utf-8") as f:
+        f.write("""<!DOCTYPE html><html><head><title>Vita</title></head><body><h1>فيتا - المال الحي</h1></body></html>""")
+    
+    with open(f"{base}/whitepaper.html", "w", encoding="utf-8") as f:
+        f.write("""<!DOCTYPE html><html><head><title>الورقة البيضاء</title></head><body><h1>الورقة البيضاء</h1></body></html>""")
+    
+    with open(f"{base}/about.html", "w", encoding="utf-8") as f:
+        f.write("""<!DOCTYPE html><html><head><title>عن فيتا</title></head><body><h1>عن فيتا</h1></body></html>""")
+    
+    with open(f"{base}/community.html", "w", encoding="utf-8") as f:
+        f.write("""<!DOCTYPE html><html><head><title>مجتمع فيتا</title></head><body><h1>مجتمع فيتا</h1></body></html>""")
+    
+    with open(f"{base}/README.md", "w", encoding="utf-8") as f:
+        f.write("# Vita Project")
+    
+    with open(f"{base}/assets/manifest.json", "w", encoding="utf-8") as f:
+        f.write('{"name": "Vita"}')
+    
+    with open(f"{base}/.github/workflows/main.yml", "w", encoding="utf-8") as f:
+        f.write("""name: Deploy to GitHub Pages
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
+    branches: [ main ]
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 تحميل الكود
-        uses: actions/checkout@v4
-
-      - name: 📄 إعداد الصفحات
-        uses: actions/configure-pages@v4
-
-      - name: 📦 رفع الموقع
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+      - uses: actions/deploy-pages@v4
+""")
+    
+    print("✅ تم إنشاء مجلد VitaProject مع جميع الملفات بنجاح!")
 
-      - name: 🚀 النشر على GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+if __name__ == "__main__":
+    create_project()
