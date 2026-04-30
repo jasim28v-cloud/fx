@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vita ⴾ — مجتمع فيتا</title>
+    <style>
+        body { font-family: 'Segoe UI', 'Cairo', sans-serif; background: #0a1a0a; color: #c8e6c9; padding: 40px; max-width: 700px; margin: auto; text-align: center; line-height: 2; }
+        h1 { color: #4caf50; font-size: 2.5em; }
+        .counter { font-size: 3em; color: #ff9800; font-weight: bold; }
+        .btn { background: #2e7d32; color: #fff; border: none; padding: 15px 35px; border-radius: 35px; font-size: 1.2em; cursor: pointer; margin: 20px; }
+        .btn:hover { background: #1b5e20; }
+        input { padding: 15px; border-radius: 30px; border: 1px solid #4caf50; background: #1a2a1a; color: #fff; width: 80%; font-size: 1em; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>ⴾ مجتمع فيتا</h1>
+    <p style="color:#81c784;">الكروب الحيوي — أوائل حاملي الشريحة</p>
+    <div class="counter" id="memberCount">47</div>
+    <p>عدد المؤمنين الأوائل</p>
+    <p style="margin-top:30px;">هل تريد أن تكون من أوائل حاملي Vita؟</p>
+    <input type="text" placeholder="التردد البيولوجي أو البريد الحيوي"><br>
+    <button class="btn" onclick="alert('تم تسجيل اهتمامك. مرحبًا بك في كروب فيتا.')">انضم إلى الكروب</button>
+    <p style="margin-top:40px; color:#3a5a3a;">"أنت تحيا، إذًا أنت تملك."</p>
+    <script>
+        setInterval(() => { if (Math.random() < 0.3) { const el = document.getElementById('memberCount'); el.innerText = parseInt(el.innerText) + 1; } }, 8000);
+    </script>
+</body>
+</html>

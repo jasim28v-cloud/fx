@@ -1,0 +1,14 @@
+{
+    "name": "Vita",
+    "symbol": "ⴾ",
+    "version": "1.0.0",
+    "description": "أول نظام مالي بيولوجي في التاريخ. المال الحي.",
+    "type": "biological-currency",
+    "transport": "Schumann Resonance (7.83 Hz)",
+    "wallet": "Biochip (living neural tissue)",
+    "mining": "Proof of Life",
+    "author": "Vita Foundation",
+    "year": 2026,
+    "tagline": "Vita ex Terra, Vita in Corpore",
+    "tagline_ar": "الحياة من الأرض، الحياة في الجسد"
+}
